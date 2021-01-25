@@ -1,4 +1,4 @@
-TPTP parser in Scala
+Scala TPTP parser 
 ========
 
 `scala-tptp-parser` is a library for parsing the input languages of the [TPTP infrastructure](http://tptp.org).
