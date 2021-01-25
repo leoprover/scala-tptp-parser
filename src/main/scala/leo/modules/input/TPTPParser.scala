@@ -986,6 +986,11 @@ object TPTPParser {
               THF.FunctionTerm(fn, args)
           }
 
+        case c if isDefinedTH1Constant(c) => // counts as ATOM, hence + expect equality
+          feasibleForEq = true
+          val constant = consume()
+          THF.DefinedTH1ConstantTerm(tokenToDefinedTH1Constant(constant))
+
         case DOUBLEQUOTED => // counts as ATOM, hence + expect equality
           feasibleForEq = true
           val distinctobject = consume()._2
@@ -1076,14 +1081,24 @@ object TPTPParser {
     // Other THF stuff
     ////////////////////////////////////////////////////////////////////////
 
-    // Only real connective: So no @ (application), as opposed to isBinaryTHFConnective
+    @inline private[this] def isDefinedTH1Constant(tokenType: TokenType): Boolean = tokenType match {
+      case FORALLCOMB | EXISTSCOMB | DESCRIPTIONCOMB | CHOICECOMB | EQCOMB => true
+      case _ => false
+    }
+    private[this] def tokenToDefinedTH1Constant(token: Token): THF.DefinedTH1Constant = token._1 match {
+      case FORALLCOMB => THF.!!
+      case EXISTSCOMB => THF.??
+      case CHOICECOMB => THF.@@+
+      case DESCRIPTIONCOMB => THF.@@-
+      case EQCOMB => THF.@=
+      case _ => error(Seq(FORALLCOMB, EXISTSCOMB, CHOICECOMB, DESCRIPTIONCOMB, EQCOMB), token)
+    }
+
+    // Only real connectives: So no @ (application), as opposed to isBinaryTHFConnective
     @inline private[this] def isTHFConnective(tokenType: TokenType): Boolean =
       isUnaryTHFConnective(tokenType) || isBinaryConnective(tokenType) || isEqualityLikeConnective(tokenType)
 
-    @inline private[this] def isUnaryTHFConnective(tokenType: TokenType): Boolean = isUnaryConnective(tokenType) || (tokenType match {
-      case FORALLCOMB | EXISTSCOMB | DESCRIPTIONCOMB | CHOICECOMB | EQCOMB => true
-      case _ => false
-    })
+    @inline private[this] def isUnaryTHFConnective(tokenType: TokenType): Boolean = isUnaryConnective(tokenType)
     @inline private[this] def isBinaryTHFConnective(tokenType: TokenType): Boolean = isBinaryConnective(tokenType) || tokenType == APP
     @inline private[this] def isBinaryTHFTypeConstructor(tokenType: TokenType): Boolean = tokenType == STAR || tokenType == RANGLE || tokenType == PLUS
     @inline private[this] def isTHFQuantifier(tokenType: TokenType): Boolean = isQuantifier(tokenType) || (tokenType match {
@@ -1119,12 +1134,7 @@ object TPTPParser {
     }
     private[this] def tokenToTHFUnaryConnective(token: Token): THF.UnaryConnective = token._1 match {
       case NOT => THF.~
-      case FORALLCOMB => THF.!!
-      case EXISTSCOMB => THF.??
-      case CHOICECOMB => THF.@@+
-      case DESCRIPTIONCOMB => THF.@@-
-      case EQCOMB => THF.@=
-      case _ => error(Seq(NOT, FORALLCOMB, EXISTSCOMB, CHOICECOMB, DESCRIPTIONCOMB, EQCOMB), token)
+      case _ => error(Seq(NOT), token)
     }
     private[this] def tokenToTHFQuantifier(token: Token): THF.Quantifier = token._1 match {
       case FORALL => THF.!
