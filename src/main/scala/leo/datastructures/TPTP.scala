@@ -270,7 +270,6 @@ object TPTP {
       override def symbols: Set[String] = Set.empty
     }
     final case class UnaryFormula(connective: UnaryConnective, body: Formula) extends Formula {
-      assert(connective == ~) // TODO: Ask Geoff about this.
       override def pretty: String = s"${connective.pretty} (${body.pretty})"
       override def symbols: Set[String] = body.symbols
     }
@@ -289,6 +288,10 @@ object TPTP {
     final case class LetTerm(typing: Map[String, Type], binding: Seq[(Formula, Formula)], body: Formula) extends Formula {
       override def pretty: String = s"$$let(...,${body.pretty})" // TODO
       override def symbols: Set[String] = Set.empty // TODO
+    }
+    final case class DefinedTH1ConstantTerm(constant: DefinedTH1Constant) extends Formula {
+      override def pretty: String = constant.pretty
+      override def symbols: Set[String] = Set.empty
     }
     final case class ConnectiveTerm(conn: Connective) extends Formula {
       override def pretty: String = s"(${conn.pretty})"
@@ -309,11 +312,6 @@ object TPTP {
     sealed abstract class Connective extends Pretty
     sealed abstract class UnaryConnective extends Connective
     final case object ~ extends UnaryConnective { override def pretty: String = "~" }
-    final case object !! extends UnaryConnective { override def pretty: String = "!!" } // big pi
-    final case object ?? extends UnaryConnective { override def pretty: String = "??" } // big sigma
-    final case object @@+ extends UnaryConnective { override def pretty: String = "@@+" } // Choice
-    final case object @@- extends UnaryConnective { override def pretty: String = "@@-" } // Description
-    final case object @= extends UnaryConnective { override def pretty: String = "@=" } // Prefix equality
 
     sealed abstract class BinaryConnective extends Connective
     final case object Eq extends BinaryConnective { override def pretty: String = "=" }
@@ -343,6 +341,15 @@ object TPTP {
     final case object @- extends Quantifier { override def pretty: String = "@-" } // Description
     final case object !> extends Quantifier { override def pretty: String = "!>" } // type forall
     final case object ?* extends Quantifier { override def pretty: String = "?*" } // type exists
+
+    /** Special kind of interpreted TPTP constants that do not start with a dollar sign.
+     * Used in TH1 for polymorphic constant symbols that correspond to quantification, equality, etc. */
+    sealed abstract class DefinedTH1Constant extends Pretty
+    final case object !! extends DefinedTH1Constant { override def pretty: String = "!!" } // big pi
+    final case object ?? extends DefinedTH1Constant { override def pretty: String = "??" } // big sigma
+    final case object @@+ extends DefinedTH1Constant { override def pretty: String = "@@+" } // Choice
+    final case object @@- extends DefinedTH1Constant { override def pretty: String = "@@-" } // Description
+    final case object @= extends DefinedTH1Constant { override def pretty: String = "@=" } // Prefix equality
   }
 
   ////////////////////////////////////////////////////////////////////////
