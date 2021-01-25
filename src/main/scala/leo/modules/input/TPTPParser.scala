@@ -1,3 +1,5 @@
+/* This file is part of the scala-tptp-parser library. See README.md and LICENSE.txt in root directory for more information. */
+
 package leo
 package modules.input
 
@@ -29,7 +31,7 @@ import scala.io.Source
  *
  * @author Alexander Steen
  * @see Original TPTP syntax definition at [[http://tptp.org/TPTP/SyntaxBNF.html]].
- * @note For the implementation of this parser v7.4.0.0 of the TPTP syntax was used.
+ * @note For the implementation of this parser v7.4.0.3 of the TPTP syntax was used.
  * @note Limitations: Currently, FOOL logic (i.e., TFX) cannot be parsed.
  * @since January 2021
  */
