@@ -108,9 +108,14 @@ object TPTP {
   @inline private[this] final def prettifyAnnotated(prefix: String, name: String, role: String, formula: Pretty, annotations: Annotations): String = {
     if (annotations.isEmpty) s"$prefix($name, $role, ${formula.pretty})."
     else {
-      if (annotations.get._2.isEmpty) s"$prefix($name, $role, ${formula.pretty}, ${annotations.get._1.pretty})."
-      else s"$prefix($name, $role, ${formula.pretty}, ${annotations.get._1.pretty}, [${annotations.get._2.get.map(_.pretty).mkString(",")}])."
+      if (annotations.get._2.isEmpty) s"$prefix(${escapeName(name)}, $role, ${formula.pretty}, ${annotations.get._1.pretty})."
+      else s"$prefix(${escapeName(name)}, $role, ${formula.pretty}, ${annotations.get._1.pretty}, [${annotations.get._2.get.map(_.pretty).mkString(",")}])."
     }
+  }
+
+  private def escapeName(name: String): String = {
+    val integerRegex = "^[+-]?[\\d]+$"
+    if (name.matches(integerRegex)) name else escapeAtomicWord(name)
   }
 
   ////////////////////////////////////////////////////////////////////////
