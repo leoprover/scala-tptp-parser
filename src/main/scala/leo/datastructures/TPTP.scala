@@ -13,9 +13,9 @@ object TPTP {
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
 
-  final case class Problem(includes: Seq[Include], formulas: Seq[AnnotatedFormula]) extends Pretty {
+  final case class Problem(includes: Seq[Include], formulas: Seq[AnnotatedFormula]) {
     /** A TPTP-compliant serialization of the problem representation. */
-    override def pretty: String = {
+    def pretty: String = {
       val sb: StringBuilder = new StringBuilder()
       includes.foreach { case (filename, inc) =>
         if (inc.isEmpty) {
@@ -39,7 +39,7 @@ object TPTP {
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
 
-  sealed abstract class AnnotatedFormula extends Pretty {
+  sealed abstract class AnnotatedFormula {
     import AnnotatedFormula.FormulaType.FormulaType
 
     type F
@@ -56,7 +56,7 @@ object TPTP {
     def formulaType: FormulaType
 
     /** Returns a TPTP-compliant serialization of the formula. */
-    override def pretty: String
+    def pretty: String
 
     /** Contains every constant symbol (i.e., no variables) occurring in the formula, including term and type symbols. */
     def symbols: Set[String]
@@ -81,7 +81,7 @@ object TPTP {
     type F = THF.Statement
 
     override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.THF
-    override def pretty: String = prettifyAnnotated("thf", name, role, formula, annotations)
+    override def pretty: String = prettifyAnnotated("thf", name, role, formula.pretty, annotations)
     override def symbols: Set[String] = formula.symbols
   }
 
@@ -92,7 +92,7 @@ object TPTP {
     type F = TFF.Statement
 
     override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.TFF
-    override def pretty: String = prettifyAnnotated("tff", name, role, formula, annotations)
+    override def pretty: String = prettifyAnnotated("tff", name, role, formula.pretty, annotations)
     override def symbols: Set[String] = formula.symbols
   }
 
@@ -103,7 +103,7 @@ object TPTP {
     type F = FOF.Statement
 
     override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.FOF
-    override def pretty: String = prettifyAnnotated("fof", name, role, formula, annotations)
+    override def pretty: String = prettifyAnnotated("fof", name, role, formula.pretty, annotations)
     override def symbols: Set[String] = formula.symbols
   }
 
@@ -123,7 +123,7 @@ object TPTP {
     type F = CNF.Statement
 
     override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.CNF
-    override def pretty: String = prettifyAnnotated("cnf", name, role, formula, annotations)
+    override def pretty: String = prettifyAnnotated("cnf", name, role, formula.pretty, annotations)
     override def symbols: Set[String] = formula.symbols
   }
 
@@ -134,15 +134,15 @@ object TPTP {
     type F = FOF.Statement
 
     override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.TPI
-    override def pretty: String = prettifyAnnotated("tpi", name, role, formula, annotations)
+    override def pretty: String = prettifyAnnotated("tpi", name, role, formula.pretty, annotations)
     override def symbols: Set[String] = formula.symbols
   }
 
-  @inline private[this] final def prettifyAnnotated(prefix: String, name: String, role: String, formula: Pretty, annotations: Annotations): String = {
-    if (annotations.isEmpty) s"$prefix($name, $role, ${formula.pretty})."
+  @inline private[this] final def prettifyAnnotated(prefix: String, name: String, role: String, formula: String, annotations: Annotations): String = {
+    if (annotations.isEmpty) s"$prefix($name, $role, $formula)."
     else {
-      if (annotations.get._2.isEmpty) s"$prefix(${escapeName(name)}, $role, ${formula.pretty}, ${annotations.get._1.pretty})."
-      else s"$prefix(${escapeName(name)}, $role, ${formula.pretty}, ${annotations.get._1.pretty}, [${annotations.get._2.get.map(_.pretty).mkString(",")}])."
+      if (annotations.get._2.isEmpty) s"$prefix(${escapeName(name)}, $role, $formula, ${annotations.get._1.pretty})."
+      else s"$prefix(${escapeName(name)}, $role, $formula, ${annotations.get._1.pretty}, [${annotations.get._2.get.map(_.pretty).mkString(",")}])."
     }
   }
 
@@ -157,7 +157,9 @@ object TPTP {
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
 
-  sealed abstract class Number extends Pretty
+  sealed abstract class Number {
+    def pretty: String
+  }
   final case class Integer(value: Int) extends Number {
     override def pretty: String = value.toString
   }
@@ -169,8 +171,8 @@ object TPTP {
                                   else s"$wholePart.${decimalPlaces}E$exponent"
   }
 
-  final case class GeneralTerm(data: Seq[GeneralData], list: Option[Seq[GeneralTerm]]) extends Pretty {
-    override def pretty: String = {
+  final case class GeneralTerm(data: Seq[GeneralData], list: Option[Seq[GeneralTerm]]) {
+    def pretty: String = {
       val sb: StringBuilder = new StringBuilder()
       if (data.nonEmpty) {
         sb.append(data.map(_.pretty).mkString(":"))
@@ -195,7 +197,9 @@ object TPTP {
     *   @see See [[GeneralTerm]] for some context and
     *        [[http://tptp.org/TPTP/SyntaxBNF.html#general_term]] for a use case.
     */
-  sealed abstract class GeneralData extends Pretty
+  sealed abstract class GeneralData {
+    def pretty: String
+  }
   /** @see [[GeneralData]] */
   final case class MetaFunctionData(f: String, args: Seq[GeneralTerm]) extends GeneralData {
     override def pretty: String = {
@@ -223,7 +227,9 @@ object TPTP {
     override def pretty: String = data.pretty
   }
 
-  sealed abstract class FormulaData extends Pretty
+  sealed abstract class FormulaData {
+    def pretty: String
+  }
   final case class THFData(formula: THF.Statement) extends FormulaData {
     override def pretty: String = s"$$thf(${formula.pretty})"
   }
@@ -259,8 +265,9 @@ object TPTP {
     type TypedVariable = (String, Type)
     type Type = Formula
 
-    sealed abstract class Statement extends Pretty {
+    sealed abstract class Statement {
       def symbols: Set[String]
+      def pretty: String
     }
     final case class Typing(atom: String, typ: Type) extends Statement {
       override def pretty: String = {
@@ -277,8 +284,9 @@ object TPTP {
     // Types as terms; for TH1 parsing. That's why we dont have a clean separation between terms and types here.
     // We don't care for well-typedness etc. in parsing. We can parse syntactically correct but completely meaningless
     // and ill-typed inputs. This will be addressed in the interpretation step.
-    sealed abstract class Formula extends Pretty {
+    sealed abstract class Formula {
       def symbols: Set[String]
+      def pretty: String
     }
 
     final case class FunctionTerm(f: String, args: Seq[Formula]) extends Formula  {
@@ -342,7 +350,9 @@ object TPTP {
       override def symbols: Set[String] = Set.empty
     }
 
-    sealed abstract class Connective extends Pretty
+    sealed abstract class Connective {
+      def pretty: String
+    }
     sealed abstract class UnaryConnective extends Connective
     final case object ~ extends UnaryConnective { override def pretty: String = "~" }
 
@@ -366,7 +376,9 @@ object TPTP {
     final case object ProductTyConstructor extends BinaryConnective { override def pretty: String = "*" }
     final case object SumTyConstructor extends BinaryConnective { override def pretty: String = "+" }
 
-    sealed abstract class Quantifier extends Pretty
+    sealed abstract class Quantifier {
+      def pretty: String
+    }
     final case object ! extends Quantifier { override def pretty: String = "!" } // All
     final case object ? extends Quantifier { override def pretty: String = "?" } // Exists
     final case object ^ extends Quantifier { override def pretty: String = "^" } // Lambda
@@ -377,7 +389,9 @@ object TPTP {
 
     /** Special kind of interpreted TPTP constants that do not start with a dollar sign.
      * Used in TH1 for polymorphic constant symbols that correspond to quantification, equality, etc. */
-    sealed abstract class DefinedTH1Constant extends Pretty
+    sealed abstract class DefinedTH1Constant {
+      def pretty: String
+    }
     final case object !! extends DefinedTH1Constant { override def pretty: String = "!!" } // big pi
     final case object ?? extends DefinedTH1Constant { override def pretty: String = "??" } // big sigma
     final case object @@+ extends DefinedTH1Constant { override def pretty: String = "@@+" } // Choice
@@ -394,8 +408,9 @@ object TPTP {
   object TFF {
     type TypedVariable = (String, Type)
 
-    sealed abstract class Statement extends Pretty {
+    sealed abstract class Statement {
       def symbols: Set[String]
+      def pretty: String
     }
     final case class Typing(atom: String, typ: Type) extends Statement {
       override def pretty: String = {
@@ -409,8 +424,9 @@ object TPTP {
       override def symbols: Set[String] = formula.symbols
     }
 
-    sealed abstract class Formula extends Pretty {
+    sealed abstract class Formula {
       def symbols: Set[String]
+      def pretty: String
     }
     final case class AtomicFormula(f: String, args: Seq[Term]) extends Formula  {
       override def pretty: String = {
@@ -447,8 +463,9 @@ object TPTP {
     // Conditional only really makes sense in TFX. We don't support the full first-class Booleans for now.
     // Same for let-statements.
 
-    sealed abstract class Term extends Pretty {
+    sealed abstract class Term {
       def symbols: Set[String]
+      def pretty: String
     }
     final case class AtomicTerm(f: String, args: Seq[Term]) extends Term  {
       override def pretty: String = {
@@ -483,7 +500,9 @@ object TPTP {
       override def symbols: Set[String] = elements.flatMap(_.symbols).toSet
     }
 
-    sealed abstract class Connective extends Pretty
+    sealed abstract class Connective {
+      def pretty: String
+    }
     sealed abstract class UnaryConnective extends Connective
     final case object ~ extends UnaryConnective { override def pretty: String = "~" }
 
@@ -499,12 +518,15 @@ object TPTP {
     final case object | extends BinaryConnective { override def pretty: String = "|" }
     final case object & extends BinaryConnective { override def pretty: String = "&" }
 
-    sealed abstract class Quantifier extends Pretty
+    sealed abstract class Quantifier {
+      def pretty: String
+    }
     final case object ! extends Quantifier { override def pretty: String = "!" } // All
     final case object ? extends Quantifier { override def pretty: String = "?" } // Exists
 
-    sealed abstract class Type extends Pretty {
+    sealed abstract class Type {
       def symbols: Set[String]
+      def pretty: String
     }
     final case class AtomicType(name: String, args: Seq[Type]) extends Type {
       override def pretty: String = if (args.isEmpty) name else s"$name(${args.map(_.pretty).mkString(",")})"
@@ -558,16 +580,18 @@ object TPTP {
   ////////////////////////////////////////////////////////////////////////
 
   object FOF {
-    sealed abstract class Statement extends Pretty {
+    sealed abstract class Statement {
       def symbols: Set[String]
+      def pretty: String
     }
     final case class Logical(formula: Formula) extends Statement {
       override def pretty: String = formula.pretty
       override def symbols: Set[String] = formula.symbols
     }
 
-    sealed abstract class Formula extends Pretty {
+    sealed abstract class Formula {
       def symbols: Set[String]
+      def pretty: String
     }
     final case class AtomicFormula(f: String, args: Seq[Term]) extends Formula  {
       override def pretty: String = {
@@ -603,8 +627,9 @@ object TPTP {
       override def symbols: Set[String] = left.symbols ++ right.symbols
     }
 
-    sealed abstract class Term extends Pretty {
+    sealed abstract class Term {
       def symbols: Set[String]
+      def pretty: String
     }
     final case class AtomicTerm(f: String, args: Seq[Term]) extends Term  {
       override def pretty: String = {
@@ -635,7 +660,9 @@ object TPTP {
       override def symbols: Set[String] = Set.empty
     }
 
-    sealed abstract class Connective extends Pretty
+    sealed abstract class Connective {
+      def pretty: String
+    }
     sealed abstract class UnaryConnective extends Connective
     final case object ~ extends UnaryConnective { override def pretty: String = "~" }
 
@@ -651,7 +678,9 @@ object TPTP {
     final case object | extends BinaryConnective { override def pretty: String = "|" }
     final case object & extends BinaryConnective { override def pretty: String = "&" }
 
-    sealed abstract class Quantifier extends Pretty
+    sealed abstract class Quantifier {
+      def pretty: String
+    }
     final case object ! extends Quantifier { override def pretty: String = "!" } // All
     final case object ? extends Quantifier { override def pretty: String = "?" } // Exists
   }
@@ -663,8 +692,9 @@ object TPTP {
   ////////////////////////////////////////////////////////////////////////
 
   object CNF {
-    sealed abstract class Statement extends Pretty {
+    sealed abstract class Statement {
       def symbols: Set[String]
+      def pretty: String
     }
     final case class Logical(formula: Formula) extends Statement {
       override def pretty: String = formula.map(_.pretty).mkString(" | ")
@@ -673,8 +703,9 @@ object TPTP {
 
     type Formula = Seq[Literal]
 
-    sealed abstract class Literal extends Pretty {
+    sealed abstract class Literal {
       def symbols: Set[String]
+      def pretty: String
     }
     final case class PositiveAtomic(formula: AtomicFormula) extends Literal {
       override def pretty: String = formula.pretty
@@ -693,8 +724,8 @@ object TPTP {
       override def symbols: Set[String] = left.symbols ++ right.symbols
     }
 
-    final case class AtomicFormula(f: String, args: Seq[Term]) extends Pretty  {
-      override def pretty: String = {
+    final case class AtomicFormula(f: String, args: Seq[Term])  {
+      def pretty: String = {
         val escapedF = if (f.startsWith("$") || f.startsWith("$$")) f else escapeAtomicWord(f)
         if (args.isEmpty) escapedF else s"$escapedF(${args.map(_.pretty).mkString(",")})"
       }
@@ -707,8 +738,9 @@ object TPTP {
       @inline def isConstant: Boolean = args.isEmpty
     }
 
-    sealed abstract class Term extends Pretty {
+    sealed abstract class Term {
       def symbols: Set[String]
+      def pretty: String
     }
     final case class AtomicTerm(f: String, args: Seq[Term]) extends Term  {
       override def pretty: String = {
