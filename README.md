@@ -13,3 +13,22 @@ The package contains a data structure for the abstract syntax tree (AST) of the 
 
 Currently, parsing of TFX (FOOL) and TCF (typed CNF) is not supported. Apart from that, the parser should cover every other language.
 The parser is based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html).
+
+## Install
+### sbt projects
+
+In order to use the library within your Scala sbt project, you can define the project library as follows in the `build.sbt`:
+```scala
+lazy val parserLib = ProjectRef(uri("git://github.com/leoprover/scala-tptp-parser"), "tptpParser")
+```
+... and then to declare the depency to your project via ...
+```scala
+[...].dependsOn(parserLib)
+```
+
+### Non-sbt-projects
+In order to use the library with a non-sbt project, you can simply compile the library and the class files/the .jar file as a non-managed dependency.
+
+## Usage
+
+... todo
