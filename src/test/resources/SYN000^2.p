@@ -168,59 +168,61 @@ thf(dc_type,type,(
         $int ] )).
 
 %----Conditional constructs. Waiting for TPTP4X upgrades.
-%% thf(ite_1,axiom,
-%%     ! [X:$int,Y:$int] : $ite($greater @ X @ Y,pll @ X,pll @ Y) ).
-%% 
-%% thf(ite_2,axiom,
-%%     ! [X:$int,Y:$int] : ( pll @ $ite($greater @ X @ Y,X,Y)) ).
-%% 
-%% thf(max_defn,axiom,
-%%     ! [X: $int,Y: $int]: ((max @ X @ Y) = $ite($greatereq @ X @ Y,X,Y)) ).
-%% 
-%% thf(max_property,axiom,
-%%     ! [X: $int,Y: $int]: $ite((max @ X @ Y) = X,$greatereq @ X @ Y,$greatereq @ Y @ X)).
-%% 
-%% thf(ite_tuple_1,axiom,
-%%     ! [X:$int,Y:$int] : (pc @ $ite($greater @ X @ Y,[X,Y],[Y,X])) ).
-%% 
-%% thf(ite_tuple_2,axiom,
-%%     ! [X:$int,Y:$int] : (dc = $ite($greater @ X @ Y,[X,Y],[Y,X])) ).
+ thf(ite_1,axiom,
+     ! [X:$int,Y:$int] : $ite($greater @ X @ Y,pll @ X,pll @ Y) ).
+ 
+ thf(ite_2,axiom,
+     ! [X:$int,Y:$int] : ( pll @ $ite($greater @ X @ Y,X,Y)) ).
+ 
+ thf(max_defn,axiom,
+     ! [X: $int,Y: $int]: ((max @ X @ Y) = $ite($greatereq @ X @ Y,X,Y)) ).
+ 
+ thf(max_property,axiom,
+     ! [X: $int,Y: $int]: $ite((max @ X @ Y) = X,$greatereq @ X @ Y,$greatereq @ Y @ X)).
+ 
+ thf(ite_tuple_1,axiom,
+     ! [X:$int,Y:$int] : (pc @ $ite($greater @ X @ Y,[X,Y],[Y,X])) ).
+ 
+ thf(ite_tuple_2,axiom,
+     ! [X:$int,Y:$int] : (dc = $ite($greater @ X @ Y,[X,Y],[Y,X])) ).
 
 %----Let binders. Waiting for TPTP4X upgrades.
-%% thf(let_1,axiom,
-%%     $let(ff: $int > $int > $rat,
-%%         ff @ X @ Y:= fl @ X @ X @ Y @ Y,
-%%         pl @ (ff @ il @ jl)) ).
-%% 
-%% thf(let_2,axiom,
-%%     $let(ff: $int > $int > $rat,
-%%         ff := ^ [X: $int,Y: $int] : (fl @ X @ X @ Y @ Y),
-%%         pl @ (ff @ il @ jl)) ).
-%% 
-%% thf(let_tuple_1,axiom,
-%%     $let([a: $int,b: $int],
-%%         [a:= b,b:= a],
-%%         ql @ a @ b)).
-%% 
-%% thf(let_tuple_2,axiom,
-%%     $let([ff: $int > $int > $int, gg: $int > $int],
-%%         [ff @ X @ Y:= fll @ X @ X @ Y @ Y, gg @ Z:= fll @ Z @ Z @ Z @ Z],
-%%         pll @ (ff @ il @ ( gg @ il))) ).
-%% 
-%% thf(let_tuple_3,axiom,
-%%     $let(ff: $int > $int > $int,
-%%          ff @ X @ Y:= fll @ X @ X @ Y @ Y,
-%%          $let(gg: $int > $int,gg @ Z:= ff @ Z @ Z,pll @ (gg @ il)) ) ).
-%% 
+ thf(let_1,axiom,
+     $let(ff: $int > $int > $rat,
+         ff @ X @ Y:= fl @ X @ X @ Y @ Y,
+         pl @ (ff @ il @ jl)) ).
+ 
+ thf(let_2,axiom,
+     $let(ff: $int > $int > $rat,
+         ff := ^ [X: $int,Y: $int] : (fl @ X @ X @ Y @ Y),
+         pl @ (ff @ il @ jl)) ).
+ 
+ thf(let_tuple_1,axiom,
+     $let([a: $int,b: $int],
+         [a:= b,b:= a],
+         ql @ a @ b)).
+ 
+ thf(let_tuple_2,axiom,
+     $let([ff: $int > $int > $int, gg: $int > $int],
+         [ff @ X @ Y:= fll @ X @ X @ Y @ Y, gg @ Z:= fll @ Z @ Z @ Z @ Z],
+         pll @ (ff @ il @ ( gg @ il))) ).
+ 
+ thf(let_tuple_3,axiom,
+     $let(ff: $int > $int > $int,
+          ff @ X @ Y:= fll @ X @ X @ Y @ Y,
+          $let(gg: $int > $int,gg @ Z:= ff @ Z @ Z,pll @ (gg @ il)) ) ).
+ 
+%% Not supported by scala-tptp-parser
+%%
 %% thf(let_tuple_4,axiom,
 %%     $let([a:$int,b:$int],
 %%         [a,b]:= [27,28],
 %%         qll @ a @ b) ).
-%% 
-%% thf(let_tuple_5,axiom,
-%%     $let(d: [$int,$int],
-%%         d:= [27,28],
-%%         pc @ d) ).
+ 
+ thf(let_tuple_5,axiom,
+     $let(d: [$int,$int],
+         d:= [27,28],
+         pc @ d) ).
 
 %----Connective terms
 thf(connective_terms,axiom,(
