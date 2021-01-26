@@ -923,7 +923,6 @@ object TPTPParser {
           val fn = consume()._2
           fn match {
             case "$let" =>
-              consume()
               a(LPAREN)
               // types
               val tyMap: Map[String, THF.Type] = if (o(LBRACKET, null) == null) {
@@ -944,19 +943,19 @@ object TPTPParser {
               // bindings
               var definitions: Seq[(THF.Formula, THF.Formula)] = Seq.empty
               if (o(LBRACKET, null) == null) {
-                val leftSide = thfLogicFormula()
+                val leftSide = thfLogicFormula0()
                 a(ASSIGNMENT)
-                val rightSide = thfLogicFormula()
+                val rightSide = thfLogicFormula0()
                 definitions = definitions :+ (leftSide, rightSide)
               } else {
-                val leftSide = thfLogicFormula()
+                val leftSide = thfLogicFormula0()
                 a(ASSIGNMENT)
-                val rightSide = thfLogicFormula()
+                val rightSide = thfLogicFormula0()
                 definitions = definitions :+ (leftSide, rightSide)
                 while (o(COMMA, null) != null) {
-                  val leftSideN = thfLogicFormula()
+                  val leftSideN = thfLogicFormula0()
                   a(ASSIGNMENT)
-                  val rightSideN = thfLogicFormula()
+                  val rightSideN = thfLogicFormula0()
                   definitions = definitions :+ (leftSideN, rightSideN)
                 }
                 a(RBRACKET)
@@ -966,7 +965,6 @@ object TPTPParser {
               a(RPAREN)
               THF.LetTerm(tyMap, definitions, body)
             case "$ite" =>
-              consume()
               a(LPAREN)
               val cond = thfLogicFormula()
               a(COMMA)
@@ -1286,9 +1284,10 @@ object TPTPParser {
 
     private[this] def typedTFFVariable(): TFF.TypedVariable = {
       val variableName = variable()
-      a(COLON)
-      val typ = tffAtomicType()
-      (variableName, typ)
+      if (o(COLON, null) != null) {
+        val typ = tffAtomicType()
+        (variableName, Some(typ))
+      } else (variableName, None)
     }
 
     def tffTerm(): TFF.Term = {
