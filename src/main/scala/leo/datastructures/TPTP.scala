@@ -327,8 +327,14 @@ object TPTP {
       override def symbols: Set[String] = condition.symbols ++ thn.symbols ++ els.symbols
     }
     final case class LetTerm(typing: Map[String, Type], binding: Seq[(Formula, Formula)], body: Formula) extends Formula {
-      override def pretty: String = s"$$let(...,${body.pretty})" // TODO
-      override def symbols: Set[String] = Set.empty // TODO
+      override def pretty: String = {
+        val typeBinding0 = typing.map(t => s"${escapeAtomicWord(t._1)}:${t._2.pretty}").mkString(",")
+        val typeBinding = if (typing.size == 1) typeBinding0 else s"[$typeBinding0]"
+        val termBinding0 = binding.map(t => s"${t._1.pretty} := ${t._2.pretty}").mkString(",")
+        val termBinding = if (binding.size == 1) termBinding0 else s"[$termBinding0]"
+        s"$$let($typeBinding, $termBinding, ${body.pretty})"
+      }
+      override def symbols: Set[String] = typing.keySet union body.symbols
     }
     final case class DefinedTH1ConstantTerm(constant: DefinedTH1Constant) extends Formula {
       override def pretty: String = constant.pretty
@@ -406,7 +412,15 @@ object TPTP {
   ////////////////////////////////////////////////////////////////////////
 
   object TFF {
-    type TypedVariable = (String, Type)
+    type TypedVariable = (String, Option[Type])
+    @inline private final def prettifyTypedVariable(variable: TypedVariable): String = {
+      @inline val name = variable._1
+      @inline val typ = variable._2
+      typ match {
+        case Some(typ0) => s"$name:${typ0.pretty}"
+        case None => name
+      }
+    }
 
     sealed abstract class Statement {
       def symbols: Set[String]
@@ -441,7 +455,7 @@ object TPTP {
       @inline def isConstant: Boolean = args.isEmpty
     }
     final case class QuantifiedFormula(quantifier: Quantifier, variableList: Seq[TypedVariable], body: Formula) extends Formula {
-      override def pretty: String = s"(${quantifier.pretty} [${variableList.map{case (n,t) => s"$n:${t.pretty}"}.mkString(",")}]: (${body.pretty}))"
+      override def pretty: String = s"(${quantifier.pretty} [${variableList.map(prettifyTypedVariable).mkString(",")}]: (${body.pretty}))"
       override def symbols: Set[String] = body.symbols
     }
     final case class UnaryFormula(connective: UnaryConnective, body: Formula) extends Formula {
@@ -539,7 +553,7 @@ object TPTP {
     }
     // TH1
     final case class QuantifiedType(variables: Seq[TypedVariable], body: Type) extends Type {
-      override def pretty: String = s"!> [${variables.map(v => s"${v._1}: ${v._2.pretty}").mkString(",")}]: ${body.pretty}"
+      override def pretty: String = s"!> [${variables.map(prettifyTypedVariable).mkString(",")}]: ${body.pretty}"
       override def symbols: Set[String] = body.symbols
     }
     final case class TypeVariable(name: String) extends Type {
