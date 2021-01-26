@@ -14,6 +14,9 @@ The package contains a data structure for the abstract syntax tree (AST) of the 
 Currently, parsing of TFX (FOOL) and TCF (typed CNF) is not supported. Apart from that, the parser should cover every other language.
 The parser is based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html).
 
+`scala-tptp-parser` may be referenced using [![DOI](https://zenodo.org/badge/328686203.svg)](https://zenodo.org/badge/latestdoi/328686203)
+
+
 ## Install
 ### sbt projects
 
