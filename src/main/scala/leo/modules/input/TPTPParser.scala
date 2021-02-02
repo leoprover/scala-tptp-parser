@@ -1891,7 +1891,7 @@ object TPTPParser {
           val wholePart = split(0).toInt
           val anothersplit = split(1).split(Array('E', 'e'))
           val decimalPart = anothersplit(0).toInt
-          val exponent = if (anothersplit.length > 1) anothersplit(1).toInt else 1
+          val exponent = if (anothersplit.length > 1) anothersplit(1).toInt else 0
           Real(wholePart, decimalPart, exponent)
         case _ => error(Seq(INT, RATIONAL, REAL), t)
       }
