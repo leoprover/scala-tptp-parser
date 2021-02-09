@@ -18,7 +18,7 @@ lazy val tptpParser = (project in file("."))
                      | Currently, parsing of TFX (FOOL) and TCF (typed CNF) is not supported. Apart from that, the parser
                      | should cover every other language dialect.
                      | The parser is based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html).""".stripMargin,
-    version := "1.2",
+    version := "1.3",
     organization := "org.leo",
     scalaVersion := "2.13.4",
     scmInfo := Some(ScmInfo(

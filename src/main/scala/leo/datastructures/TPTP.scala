@@ -160,13 +160,13 @@ object TPTP {
   sealed abstract class Number {
     def pretty: String
   }
-  final case class Integer(value: Int) extends Number {
+  final case class Integer(value: BigInt) extends Number {
     override def pretty: String = value.toString
   }
-  final case class Rational(numerator: Int, denominator: Int) extends Number {
+  final case class Rational(numerator: BigInt, denominator: BigInt) extends Number {
     override def pretty: String = s"$numerator/$denominator"
   }
-  final case class Real(wholePart: Int, decimalPlaces: Int, exponent: Int) extends Number {
+  final case class Real(wholePart: BigInt, decimalPlaces: BigInt, exponent: BigInt) extends Number {
     override def pretty: String = if (exponent == 1) s"$wholePart.$decimalPlaces"
                                   else s"$wholePart.${decimalPlaces}E$exponent"
   }
@@ -528,6 +528,7 @@ object TPTP {
     final case object <~> extends BinaryConnective { override def pretty: String = "<~>" }
     final case object ~| extends BinaryConnective { override def pretty: String = "~|" }
     final case object ~& extends BinaryConnective { override def pretty: String = "~&" }
+    final case object := extends BinaryConnective { override def pretty: String = ":=" }
     // assoc
     final case object | extends BinaryConnective { override def pretty: String = "|" }
     final case object & extends BinaryConnective { override def pretty: String = "&" }

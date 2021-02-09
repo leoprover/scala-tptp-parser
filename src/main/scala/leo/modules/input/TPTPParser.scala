@@ -1877,21 +1877,21 @@ object TPTPParser {
     private[this] def number(): Number = {
       val t = peek()
       t._1 match {
-        case INT => Integer(consume()._2.toInt)
+        case INT => Integer(BigInt(consume()._2))
         case RATIONAL =>
           val numberTok = consume()
           val split = numberTok._2.split('/')
-          val numerator = split(0).toInt
-          val denominator = split(1).toInt
+          val numerator = BigInt(split(0))
+          val denominator = BigInt(split(1))
           if (denominator <= 0) throw new TPTPParseException("Denominator in rational number expression zero or negative", numberTok._3, numberTok._4)
           else Rational(numerator, denominator)
         case REAL =>
           val number = consume()._2
           val split = number.split('.')
-          val wholePart = split(0).toInt
+          val wholePart = BigInt(split(0))
           val anothersplit = split(1).split(Array('E', 'e'))
-          val decimalPart = anothersplit(0).toInt
-          val exponent = if (anothersplit.length > 1) anothersplit(1).toInt else 0
+          val decimalPart = BigInt(anothersplit(0))
+          val exponent = if (anothersplit.length > 1) BigInt(anothersplit(1)) else BigInt(0)
           Real(wholePart, decimalPart, exponent)
         case _ => error(Seq(INT, RATIONAL, REAL), t)
       }
