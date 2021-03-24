@@ -1,5 +1,19 @@
 /* This file is part of the scala-tptp-parser library. See README.md and LICENSE.txt in root directory for more information. */
 
+inThisBuild(List(
+  organization := "io.github.leoprover",
+  homepage := Some(url("https://github.com/leoprover/scala-tptp-parser")),
+  licenses := List("MIT" -> url("https://opensource.org/licenses/MIT")),
+  developers := List(
+    Developer(
+      "lex-lex",
+      "Alexander Steen",
+      "alexander.steen@uni.lu",
+      url("https://www.alexandersteen.de/")
+    )
+  )
+))
+
 lazy val tptpParser = (project in file("."))
   .settings(
     name := "scala-tptp-parser",
