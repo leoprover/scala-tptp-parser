@@ -52,7 +52,7 @@ object TPTPParser {
   class TPTPParseException(message: String, val line: Int, val offset: Int) extends RuntimeException(message)
 
   /**
-    * Parses a whole TPTP file given as [[io.Source]].
+    * Parses a whole TPTP file given as [[scala.io.Source]].
     *
     * @param input The TPTP problem file.
     * @return The parsing result
