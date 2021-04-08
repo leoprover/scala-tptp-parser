@@ -36,7 +36,7 @@ lazy val tptpParser = (project in file("."))
       )
     ),
     licenses += "MIT" -> url("https://opensource.org/licenses/MIT"),
-    ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
+    sonatypeCredentialHost := "s01.oss.sonatype.org",
 
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
   )
