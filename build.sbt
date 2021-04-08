@@ -20,7 +20,7 @@ lazy val tptpParser = (project in file("."))
                      | Currently, parsing of TFX (FOOL) and TCF (typed CNF) is not supported. Apart from that, the parser
                      | should cover every other language dialect.
                      | The parser is based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html).""".stripMargin,
-    scalaVersion := "2.13.4",
+    scalaVersion := "2.13.5",
     // Version number explicitly removed as this is handled by the release plugin
 
     scmInfo := Some(ScmInfo(
@@ -38,5 +38,5 @@ lazy val tptpParser = (project in file("."))
     licenses += "MIT" -> url("https://opensource.org/licenses/MIT"),
     sonatypeCredentialHost := "s01.oss.sonatype.org",
 
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.5" % "test"
   )
