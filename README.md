@@ -18,7 +18,13 @@ The parser is based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/Syn
 
 
 ## Install
-### sbt projects
+
+### Maven
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.leoprover/scala-tptp-parser_2.13.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.leoprover%22%20AND%20a:%22scala-tptp-parser_2.13%22)
+
+The Scala TPTP parser is available on Maven Central here https://search.maven.org/artifact/io.github.leoprover/scala-tptp-parser_2.13/1.3/jar
+
+### From source
 
 In order to use the library within your Scala sbt project, you can define the project library as follows in the `build.sbt`:
 ```scala
@@ -30,7 +36,7 @@ lazy val parserLib = ProjectRef(uri("git://github.com/leoprover/scala-tptp-parse
 ```
 
 ### Non-sbt-projects
-In order to use the library with a non-sbt project, you can simply compile the library and use the class files as an unmanaged dependency/class path.
+In order to use the library with a non-sbt project, you can simply compile the library and use the class files as an unmanaged dependency/class path. The latest release JAR can also be downloaded from the Maven Central link above.
 
 ## Usage
 The parser object `TPTPParser` offers several methods for parsing TPTP problems, annotated formulas or simple formulas. The input is transformed into an
