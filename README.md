@@ -18,23 +18,34 @@ The parser is based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/Syn
 
 
 ## Install
-### sbt projects
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.leoprover/scala-tptp-parser_2.13.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.leoprover%22%20AND%20a:%22scala-tptp-parser_2.13%22)
 
-In order to use the library within your Scala sbt project, you can define the project library as follows in the `build.sbt`:
-```scala
-lazy val parserLib = ProjectRef(uri("git://github.com/leoprover/scala-tptp-parser"), "tptpParser")
+The Scala TPTP parser is available on [Maven Central](https://search.maven.org/artifact/io.github.leoprover/scala-tptp-parser_2.13) (current version: 1.3).
+
+### Maven
+
+In order to include `scala-tptp-parser` into your project via Maven, just add the following dependency:
+```xml
+<dependency>
+  <groupId>io.github.leoprover</groupId>
+  <artifactId>scala-tptp-parser_2.13</artifactId>
+  <version>1.3</version>
+</dependency>
 ```
-... and then to declare the depency to your project via ...
+
+### sbt
+
+In order to include `scala-tptp-parser` into your project via SBT, just add the following dependency to your `build.sbt`:
 ```scala
-[...].dependsOn(parserLib)
+libraryDependencies += "io.github.leoprover" % "scala-tptp-parser_2.13" % "1.3"
 ```
 
 ### Non-sbt-projects
-In order to use the library with a non-sbt project, you can simply compile the library and use the class files as an unmanaged dependency/class path.
+In order to use the library with a non-sbt project, you can simply compile the library and use the class files as an unmanaged dependency/class path. The latest release JAR can also be downloaded from the Maven Central link above.
 
 ## Usage
 The parser object `TPTPParser` offers several methods for parsing TPTP problems, annotated formulas or simple formulas. The input is transformed into an
-astract syntax tree (AST) provided at `leo.datastructures.TPTP`. The ASTs are mostly case classes that can be further processed by pattern matching.
+abstract syntax tree (AST) provided at `leo.datastructures.TPTP`. The ASTs are mostly case classes that can be further processed by pattern matching.
 
 A small sample application can be seen below:
 
@@ -69,6 +80,4 @@ try {
 } catch {
  case e: TPTPParseException => println(s"Parse error at line ${e.line}:${e.offset}: ${e.getMessage}")
 }
-
 ```
-
