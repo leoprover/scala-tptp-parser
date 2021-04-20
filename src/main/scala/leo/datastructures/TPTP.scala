@@ -139,7 +139,7 @@ object TPTP {
   }
 
   @inline private[this] final def prettifyAnnotated(prefix: String, name: String, role: String, formula: String, annotations: Annotations): String = {
-    if (annotations.isEmpty) s"$prefix($name, $role, $formula)."
+    if (annotations.isEmpty) s"$prefix(${escapeName(name)}, $role, $formula)."
     else {
       if (annotations.get._2.isEmpty) s"$prefix(${escapeName(name)}, $role, $formula, ${annotations.get._1.pretty})."
       else s"$prefix(${escapeName(name)}, $role, $formula, ${annotations.get._1.pretty}, [${annotations.get._2.get.map(_.pretty).mkString(",")}])."
