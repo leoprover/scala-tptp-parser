@@ -25,6 +25,7 @@ class ParserTestSuite   extends AnyFunSuite {
     "SYN000_1.p" -> "TPTP TF0 basic syntax features",
     "SYN000^1.p" -> "TPTP THF basic syntax features",
     "SYN000-2.p" -> "TPTP CNF advanced syntax features",
+    "SYN000-2-TCF.p" -> "TPTP TCF advanced syntax (improvised)",
     "SYN000^2.p" -> "TPTP THF advanced syntax features",
     "SYN000+2.p" -> "TPTP FOF advanced syntax features",
     "SYN000_2.p" -> "TPTP TF0 advanced syntax features",
