@@ -1,7 +1,7 @@
 Scala TPTP parser 
 ========
 
-`scala-tptp-parser` is a library for parsing the input languages of the [TPTP infrastructure](http://tptp.org).
+`scala-tptp-parser` is a Scala library (for Scala 2.13.x) for parsing the input languages of the [TPTP infrastructure](http://tptp.org).
 
 The package contains a data structure for the abstract syntax tree (AST) of the parsed input as well as the parser for the different language of the TPTP, see http://tptp.org for details. In particular, the parser supports:
 
@@ -21,6 +21,7 @@ The parser is based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/Syn
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.leoprover/scala-tptp-parser_2.13.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.leoprover%22%20AND%20a:%22scala-tptp-parser_2.13%22)
 
 The Scala TPTP parser is available on [Maven Central](https://search.maven.org/artifact/io.github.leoprover/scala-tptp-parser_2.13) (current version: 1.3).
+Snapshots are available on [Sonatype](https://s01.oss.sonatype.org/content/repositories/snapshots/io/github/leoprover/scala-tptp-parser_2.13/).
 
 ### Maven
 
@@ -37,7 +38,7 @@ In order to include `scala-tptp-parser` into your project via Maven, just add th
 
 In order to include `scala-tptp-parser` into your project via SBT, just add the following dependency to your `build.sbt`:
 ```scala
-libraryDependencies += "io.github.leoprover" % "scala-tptp-parser_2.13" % "1.3"
+libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.3"
 ```
 
 ### Non-sbt-projects
