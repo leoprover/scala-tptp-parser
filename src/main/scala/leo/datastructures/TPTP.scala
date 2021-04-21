@@ -445,7 +445,7 @@ object TPTP {
 
   object TFF {
     type TypedVariable = (String, Option[Type])
-    @inline private final def prettifyTypedVariable(variable: TypedVariable): String = {
+    @inline protected[TPTP] final def prettifyTypedVariable(variable: TypedVariable): String = {
       @inline val name = variable._1
       @inline val typ = variable._2
       typ match {
@@ -612,23 +612,39 @@ object TPTP {
 
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
-  // TCF AST: TODO. Let's see if I will implement this at some point.
+  // TCF AST
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
 
-//  object TCF {
-//    sealed abstract class Statement extends Pretty
-//    final case class Typing(atom: String, typ: Type) extends Statement {
-//      override def pretty: String = {
-//        val escapedName = if (atom.startsWith("$") || atom.startsWith("$$")) atom else escapeAtomicWord(atom)
-//        s"$escapedName: ${typ.pretty}"
-//      }
-//    }
-//    final case class Logical(formula: Formula) extends Statement { override def pretty: String = formula.pretty }
-//
-//    sealed abstract class Formula extends Pretty
-//
-//  }
+  object TCF {
+    type Type = TFF.Type
+
+    sealed abstract class Statement {
+      /** Returns a set of symbols (except variables) occurring in the formula. */
+      def symbols: Set[String]
+      /** Returns a TPTP-compliant serialization of the formula. */
+      def pretty: String
+    }
+    final case class Typing(atom: String, typ: Type) extends Statement {
+      override def pretty: String = {
+        val escapedName = if (atom.startsWith("$") || atom.startsWith("$$")) atom else escapeAtomicWord(atom)
+        s"$escapedName: ${typ.pretty}"
+      }
+      override def symbols: Set[String] = typ.symbols + atom
+    }
+    final case class Logical(formula: Formula) extends Statement {
+      override def pretty: String = formula.pretty
+      override def symbols: Set[String] = formula.symbols
+    }
+
+    final case class Formula(variables: Seq[TFF.TypedVariable], clause: CNF.Formula) {
+      /** Returns a set of symbols (except variables) occurring in the formula. */
+      def symbols: Set[String] = clause.flatMap(_.symbols).toSet
+      /** Returns a TPTP-compliant serialization of the formula. */
+      def pretty: String = if (variables.isEmpty) clause.map(_.pretty).mkString(" | ")
+      else s"! [${variables.map(TFF.prettifyTypedVariable).mkString(",")}]: ${clause.map(_.pretty).mkString(" | ")}"
+    }
+  }
 
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////

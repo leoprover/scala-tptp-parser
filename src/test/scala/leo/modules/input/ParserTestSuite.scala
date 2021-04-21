@@ -20,6 +20,7 @@ class ParserTestSuite   extends AnyFunSuite {
 
   private val problems = Seq(
     "SYN000-1.p" -> "TPTP CNF basic syntax features",
+    "SYN000-1-TCF.p" -> "TPTP TCF basic syntax (improvised)",
     "SYN000+1.p" -> "TPTP FOF basic syntax features",
     "SYN000_1.p" -> "TPTP TF0 basic syntax features",
     "SYN000^1.p" -> "TPTP THF basic syntax features",
