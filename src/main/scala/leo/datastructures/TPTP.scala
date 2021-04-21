@@ -88,11 +88,12 @@ object TPTP {
      *  - [[FormulaType.TFF]]
      *  - [[FormulaType.FOF]]
      *  - [[FormulaType.CNF]]
+     *  - [[FormulaType.TCF]]
      *  - [[FormulaType.TPI]]
      */
     final object FormulaType extends Enumeration {
       type FormulaType = Value
-      final val THF, TFF, FOF, CNF, TPI = Value
+      final val THF, TFF, FOF, CNF, TCF, TPI = Value
     }
   }
   final case class THFAnnotated(override val name: String,
@@ -128,14 +129,16 @@ object TPTP {
     override def symbols: Set[String] = formula.symbols
   }
 
-  /*final case class TCFAnnotated(override val name: String,
+  final case class TCFAnnotated(override val name: String,
                                 override val role: String,
                                 override val formula: TCF.Statement,
                                 override val annotations: Annotations) extends AnnotatedFormula {
     type F = TCF.Statement
 
-    override def pretty: String = prettifyAnnotated("tcf", name, role, formula, annotations)
-  }*/
+    override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.TCF
+    override def pretty: String = prettifyAnnotated("tcf", name, role, formula.pretty, annotations)
+    override def symbols: Set[String] = formula.symbols
+  }
 
   final case class CNFAnnotated(override val name: String,
                                 override val role: String,

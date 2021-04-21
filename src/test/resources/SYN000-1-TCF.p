@@ -27,6 +27,18 @@ tcf(first_order,axiom,
     | r(X,f(Y),g(X,f(Y),Z))
     | ~ s(f(f(f(b)))) )).
 
+tcf(first_order_tcf,axiom, ! [X:$i]:
+    ( p(X)
+    | ~ q(X,a)
+    | r(X,f(Y),g(X,f(Y),Z))
+    | ~ s(f(f(f(b)))) )).
+
+tcf(first_order_tcf2,axiom, ! [X,Y,Z]:
+    ( p(X)
+    | ~ q(X,a)
+    | r(X,f(Y),g(X,f(Y),Z))
+    | ~ s(f(f(f(b)))) )).
+
 %----Equality
 tcf(equality,axiom,
     ( f(Y) = g(X,f(Y),Z)

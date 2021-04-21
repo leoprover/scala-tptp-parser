@@ -3,6 +3,8 @@
 package leo
 package modules.input
 
+import leo.datastructures.TPTP.TCFAnnotated
+
 import java.util.NoSuchElementException
 import scala.annotation.tailrec
 import scala.io.Source
@@ -56,6 +58,7 @@ object TPTPParser {
   import datastructures.TPTP.TFF.{Formula => TFFFormula}
   import datastructures.TPTP.FOF.{Formula => FOFFormula}
   import datastructures.TPTP.CNF.{Formula => CNFFormula}
+  import datastructures.TPTP.TCF.{Formula => TCFFormula}
 
   /**
     * Main exception thrown by the [[leo.modules.input.TPTPParser]] if some parsing error occurs.
@@ -156,6 +159,19 @@ object TPTPParser {
     result
   }
   /**
+   * Parses an TPTP TCF annotated formula given as String.
+   *
+   * @param annotatedFormula The annotated formula as string.
+   * @return The parsing result as [[leo.datastructures.TPTP.TCFAnnotated]] object
+   * @throws TPTPParseException If an parsing error occurred.
+   */
+  final def annotatedTCF(annotatedFormula: String): TCFAnnotated = {
+    val parser = parserFromString(annotatedFormula)
+    val result = parser.annotatedTCF()
+    parser.EOF()
+    result
+  }
+  /**
     * Parses an TPTP TPI annotated formula given as String.
     *
     * @param annotatedFormula The annotated formula as string.
@@ -209,10 +225,23 @@ object TPTPParser {
     result
   }
   /**
+   * Parses a plain TCF formula (i.e., without annotations) given as String.
+   *
+   * @param formula The annotated formula as string.
+   * @return The parsing resultas [[TCFFormula]] object
+   * @throws TPTPParseException If an parsing error occurred.
+   */
+  final def tcf(formula: String): TCFFormula = {
+    val parser = parserFromString(formula)
+    val result = parser.tcfLogicFormula()
+    parser.EOF()
+    result
+  }
+  /**
     * Parses a plain CNF formula (i.e., without annotations) given as String.
     *
     * @param formula The annotated formula as string.
-    * @return The parsing resultas [[CNFAnnotated]] object
+    * @return The parsing resultas [[CNFFormula]] object
     * @throws TPTPParseException If an parsing error occurred.
     */
   final def cnf(formula: String): CNFFormula = {
@@ -713,10 +742,11 @@ object TPTPParser {
             case "tff" => annotatedTFF()
             case "fof" => annotatedFOF()
             case "cnf" => annotatedCNF()
+            case "tcf" => annotatedTCF()
             case "tpi" => annotatedTPI()
-            case _ => error1(Seq("thf", "tff", "fof", "cnf", "tpi"), t)
+            case _ => error1(Seq("thf", "tff", "fof", "cnf", "tcf", "tpi"), t)
           }
-        case _ => error1(Seq("thf", "tff", "fof", "cnf", "tpi"), t)
+        case _ => error1(Seq("thf", "tff", "fof", "cnf", "tcf", "tpi"), t)
       }
     }
 
@@ -1600,6 +1630,70 @@ object TPTPParser {
           }
           FOF.AtomicTerm(fn, args)
         case _ => error(Seq(INT, RATIONAL, REAL, DOUBLEQUOTED, UPPERWORD, LOWERWORD, SINGLEQUOTED, DOLLARWORD, DOLLARDOLLARWORD), tok)
+      }
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////
+    // TCF formula stuff
+    ////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////
+
+    def annotatedTCF(): TCFAnnotated = {
+      m(a(LOWERWORD), "tcf")
+      a(LPAREN)
+      val n = name()
+      a(COMMA)
+      val r = a(LOWERWORD)._2
+      a(COMMA)
+      val f = tcfFormula()
+      var source: GeneralTerm = null
+      var info: Seq[GeneralTerm] = null
+      val an0 = o(COMMA, null)
+      if (an0 != null) {
+        source = generalTerm()
+        val an1 = o(COMMA, null)
+        if (an1 != null) {
+          info = generalList()
+        }
+      }
+      a(RPAREN)
+      a(DOT)
+      if (source == null) TCFAnnotated(n, r, f, None)
+      else TCFAnnotated(n, r, f, Some((source, Option(info))))
+    }
+
+    def tcfFormula(): TCF.Statement = {
+      val idx = peekUnder(LPAREN)
+      val tok = peek(idx)
+      tok._1 match {
+        case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD if peek(idx+1)._1 == COLON => // Typing
+          val tffTyping = tffAtomTyping()
+          TCF.Typing(tffTyping.atom, tffTyping.typ)
+        case _ =>
+          TCF.Logical(tcfLogicFormula())
+      }
+    }
+
+    def tcfLogicFormula(): TCF.Formula = {
+      val tok = peek()
+
+      tok._1 match {
+        case FORALL =>
+          consume()
+          a(LBRACKET)
+          val name = typedTFFVariable()
+          var names: Seq[TFF.TypedVariable] = Vector(name)
+          while (o(COMMA, null) != null) {
+            names = names :+ typedTFFVariable()
+          }
+          a(RBRACKET)
+          a(COLON)
+          val body = cnfLogicFormula()
+          TCF.Formula(names, body)
+        case _ =>
+          val body = cnfLogicFormula()
+          TCF.Formula(Seq.empty, body)
       }
     }
 
