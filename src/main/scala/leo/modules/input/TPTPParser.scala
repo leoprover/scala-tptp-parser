@@ -15,6 +15,7 @@ import scala.io.Source
  *   - THF (TH0/TH1): Monomorphic and polymorphic higher-order logic,
  *   - TFF (TF0/TF1): Monomorphic and polymorphic typed first-order logic,
  *   - FOF: Untyped first-order logic,
+ *   - TCF: Typed clause-normal form,
  *   - CNF: (Untyped) clause-normal form, and
  *   - TPI: TPTP Process Instruction language.
  *
@@ -25,18 +26,20 @@ import scala.io.Source
  *
  * The parser translated plain formulas into an abstract syntax tree defined at [[datastructures.TPTP]], resp.
  * its corresponding specializations for the respective language dialect:
- *   - THF formulas are parsed into [[datastructures.TPTP.THF]]
- *   - TFF formulas are parsed into [[datastructures.TPTP.TFF]]
- *   - FOF/TPI formulas are parsed into [[datastructures.TPTP.FOF]]
+ *   - THF formulas are parsed into [[datastructures.TPTP.THF]],
+ *   - TFF formulas are parsed into [[datastructures.TPTP.TFF]],
+ *   - FOF/TPI formulas are parsed into [[datastructures.TPTP.FOF]],
+ *   - TCF formulas are parsed into [[datastructures.TPTP.TCF]], and
  *   - CNF formulas are parsed into [[datastructures.TPTP.CNF]].
  *
  * Annotated formulas are additionally wrapped in an [[datastructures.TPTP.AnnotatedFormula]]
  * object as follows:
- *   - Annotated THF formulas wrapped as [[datastructures.TPTP.THFAnnotated]]
- *   - Annotated TFF formulas wrapped as [[datastructures.TPTP.TFFAnnotated]]
- *   - Annotated FOF formulas wrapped as [[datastructures.TPTP.FOFAnnotated]]
- *   - Annotated CNF formulas wrapped as [[datastructures.TPTP.CNFAnnotated]]
- *   - Annotated TPI formulas wrapped as [[datastructures.TPTP.TPIAnnotated]]
+ *   - Annotated THF formulas wrapped as [[datastructures.TPTP.THFAnnotated]],
+ *   - Annotated TFF formulas wrapped as [[datastructures.TPTP.TFFAnnotated]],
+ *   - Annotated FOF formulas wrapped as [[datastructures.TPTP.FOFAnnotated]],
+ *   - Annotated TCF formulas wrapped as [[datastructures.TPTP.TCFAnnotated]],
+ *   - Annotated CNF formulas wrapped as [[datastructures.TPTP.CNFAnnotated]], and
+ *   - Annotated TPI formulas wrapped as [[datastructures.TPTP.TPIAnnotated]].
  *
  * Whole TPTP files are represented by [[datastructures.TPTP.Problem]] objects.
  * Note that `include` directives etc. are parsed as-is and are represented by an [[datastructures.TPTP.Include]] entry

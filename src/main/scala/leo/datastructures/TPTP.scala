@@ -11,12 +11,13 @@ package datastructures
  *     - Annotated THF formulas by [[leo.datastructures.TPTP.THFAnnotated]],
  *     - Annotated TFF formulas by [[leo.datastructures.TPTP.TFFAnnotated]],
  *     - Annotated FOF formulas by [[leo.datastructures.TPTP.FOFAnnotated]],
+ *     - Annotated TCF formulas by [[leo.datastructures.TPTP.TCFAnnotated]],
  *     - Annotated CNF formulas by [[leo.datastructures.TPTP.CNFAnnotated]], and
  *     - Annotated TPI formulas by [[leo.datastructures.TPTP.TPIAnnotated]]
  *   - Include directives are represented by tuples `(filename,optional-list-of-ids)` of type [[leo.datastructures.TPTP.Include]].
  *
- * See [[TPTP.THF]], [[TPTP.TFF]], [[TPTP.FOF]], [[TPTP.CNF]] for more information on the
- * representation of "plain" THF, TFF, FOF and CNF formulas, respectively.
+ * See [[TPTP.THF]], [[TPTP.TFF]], [[TPTP.FOF]], [[TPTP.TCF]], [[TPTP.CNF]] for more information on the
+ * representation of "plain" THF, TFF, FOF, TCF and CNF formulas, respectively.
  *
  * All classes have a function called `pretty` that will output the TPTP-compliant representation
  * of the respective structure. It should hold that `parse(x.pretty) = x` where `parse` is
