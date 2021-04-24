@@ -581,6 +581,8 @@ object TPTP {
      * @param name The uppercase name of the variable.
      * @note In the context of TFX, this may also be a Boolean-typed variable (i.e., representing a formula).
      *       If TFX is not to be supported, it can be assumed that this only represents proper term variables.
+     * @note In the context of TF1, this may also be a type variable (i.e., representing a type).
+     *       If TF1 is not to be supported, it can be assumed that this only represents proper term variables.
      */
     final case class Variable(name: String) extends Term {
       override def pretty: String = name
@@ -633,42 +635,57 @@ object TPTP {
      *
      * @param formula The [[Formula]] in term position.
      * @note The [[leo.modules.input.TPTPParser]] will never yield expressions containing [[FormulaTerm]]s
-     *       that themself wrap single (formula) variables, i.e., the expression {{{FormulaTerm(FormulaVariable(x))}}}
-     *       is never created. Instead, an equivalent term expression {{{Variable(x)}}} is created (also for
-     *       variables that are Boolean-typed variables). Of course, you may create such instances and handle them
-     *       equivalently in your application.
+     *       that themself wrap single (formula) variables or atomic formulas, i.e., the expressions {{{FormulaTerm(FormulaVariable(x))}}}
+     *       and {{{FormulaTerm(AtomicFormula(f, args))}}}
+     *       are never created. Instead, an equivalent term expressions {{{Variable(x)}}} and
+     *       {{{AtomicTerm(f, args)}}}, respectively, are created. This means that also for
+     *       Boolean-typed variables or predicate applications, a representation as [[Term]] is returned.
+     *       Of course, users may create such instances and handle them appropriately in their application.
      */
     final case class FormulaTerm(formula: Formula) extends Term {
       override def pretty: String = formula.pretty
       override def symbols: Set[String] = formula.symbols
     }
 
+    /** Logical connectives in TFF, includes [[UnaryConnective]]s and [[BinaryConnective]]s. */
     sealed abstract class Connective {
       /** Returns a TPTP-compliant serialization of the connective. */
       def pretty: String
     }
     sealed abstract class UnaryConnective extends Connective
+    /** Negation */
     final case object ~ extends UnaryConnective { override def pretty: String = "~" }
 
     sealed abstract class BinaryConnective extends Connective
     // non-assoc
+    /** Equivalence */
     final case object <=> extends BinaryConnective { override def pretty: String = "<=>" }
+    /** Implication */
     final case object Impl extends BinaryConnective { override def pretty: String = "=>" }
+    /** Reverse implication */
     final case object <= extends BinaryConnective { override def pretty: String = "<=" }
+    /** Negated equivalence */
     final case object <~> extends BinaryConnective { override def pretty: String = "<~>" }
+    /** Negated disjunction */
     final case object ~| extends BinaryConnective { override def pretty: String = "~|" }
+    /** Negated conjunction */
     final case object ~& extends BinaryConnective { override def pretty: String = "~&" }
+    /** Assignment */
     final case object := extends BinaryConnective { override def pretty: String = ":=" }
     // assoc
+    /** Disjunction */
     final case object | extends BinaryConnective { override def pretty: String = "|" }
+    /** Conjunction */
     final case object & extends BinaryConnective { override def pretty: String = "&" }
 
     sealed abstract class Quantifier {
       /** Returns a TPTP-compliant serialization of the quantifier. */
       def pretty: String
     }
-    final case object ! extends Quantifier { override def pretty: String = "!" } // All
-    final case object ? extends Quantifier { override def pretty: String = "?" } // Exists
+    /** Universal quantification */
+    final case object ! extends Quantifier { override def pretty: String = "!" }
+    /** Existential quantification */
+    final case object ? extends Quantifier { override def pretty: String = "?" }
 
     sealed abstract class Type {
       /** Returns a set of symbols (except variables) occurring in the type. */
@@ -685,7 +702,7 @@ object TPTP {
       else s"((${left.map(_.pretty).mkString(" * ")}) > ${right.pretty})"
       override def symbols: Set[String] = left.flatMap(_.symbols).toSet ++ right.symbols
     }
-    // TH1
+    // TF1
     final case class QuantifiedType(variables: Seq[TypedVariable], body: Type) extends Type {
       override def pretty: String = s"!> [${variables.map(prettifyTypedVariable).mkString(",")}]: ${body.pretty}"
       override def symbols: Set[String] = body.symbols
