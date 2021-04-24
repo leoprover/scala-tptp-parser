@@ -514,15 +514,54 @@ object TPTP {
       override def pretty: String = s"(${left.pretty} != ${right.pretty})"
       override def symbols: Set[String] = left.symbols ++ right.symbols
     }
-    // Conditional only really makes sense in TFX. We don't support the full first-class Booleans for now.
-    // Same for let-statements.
+    // The following entries are for TFX and can be ignored for everyone not wanting to support it.
+    final case class FormulaVariable(name: String) extends Formula {
+      override def pretty: String = name
+      override def symbols: Set[String] = Set.empty
+    }
+    final case class ConditionalTerm(condition: Formula, thn: Term, els: Term) extends Formula {
+      override def pretty: String = s"$$ite(${condition.pretty}, ${thn.pretty}, ${els.pretty})"
+      override def symbols: Set[String] = condition.symbols ++ thn.symbols ++ els.symbols
+    }
+    final case class LetTerm(typing: Map[String, Type], binding: Seq[(Term, Term)], body: Term) extends Formula {
+      override def pretty: String = {
+        val typeBinding0 = typing.map(t => s"${escapeAtomicWord(t._1)}:${t._2.pretty}").mkString(",")
+        val typeBinding = if (typing.size == 1) typeBinding0 else s"[$typeBinding0]"
+        val termBinding0 = binding.map(t => s"${t._1.pretty} := ${t._2.pretty}").mkString(",")
+        val termBinding = if (binding.size == 1) termBinding0 else s"[$termBinding0]"
+        s"$$let($typeBinding, $termBinding, ${body.pretty})"
+      }
+      override def symbols: Set[String] = typing.keySet union body.symbols
+    }
 
+    /**
+     * Syntactical terms of the TFF language, i.e, first-order terms being one of:
+     *   - [[AtomicTerm]]
+     *   - [[Variable]]
+     *   - [[DistinctObject]]
+     *   - [[NumberTerm]]
+     *   - [[FormulaTerm]]*
+     *   - [[Tuple]]*
+     *
+     * Elements marked with `*` are part of the extended TFF format (TFX) and may safely be ignored
+     * if TFX is not to be supported. They will never be created by the [[leo.modules.input.TPTPParser]]
+     * for non-TFX TFF inputs. In match-case statements, non-exhaustiveness warnings may be suppressed
+     * using the [[unchecked]] annotation.
+     */
     sealed abstract class Term {
       /** Returns a set of symbols (except variables) occurring in the term. */
       def symbols: Set[String]
       /** Returns a TPTP-compliant serialization of the term. */
       def pretty: String
     }
+    /**
+     * A term expression that is either (1) a constant symbol `c`, or (2) a function expression `f(arg1,arg2,...,argN)`.
+     * In case (1) it holds that `args.isEmpty`; in case (2) it holds that `args.nonEmpty`.
+     *
+     * @param f The name of the constant or function symbol
+     * @param args The arguments `arg1`, `arg2`, ... of the function expression as sequence of [[Term]]s. The empty sequence
+     *             if the term is a constant symbol.
+     */
     final case class AtomicTerm(f: String, args: Seq[Term]) extends Term  {
       override def pretty: String = {
         val escapedF = if (f.startsWith("$") || f.startsWith("$$")) f else escapeAtomicWord(f)
@@ -536,10 +575,27 @@ object TPTP {
       @inline def isSystemFunction: Boolean = f.startsWith("$$")
       @inline def isConstant: Boolean = args.isEmpty
     }
+    /**
+     * A term that represents an uppercase variable that is bound by some quantifier.
+     *
+     * @param name The uppercase name of the variable.
+     * @note In the context of TFX, this may also be a Boolean-typed variable (i.e., representing a formula).
+     *       If TFX is not to be supported, it can be assumed that this only represents proper term variables.
+     */
     final case class Variable(name: String) extends Term {
       override def pretty: String = name
       override def symbols: Set[String] = Set.empty
     }
+    /**
+     * A term that represents an object that stands for itself, i.e., a distinct object with name `N`
+     * is interpreted to be unequal to every other distinct object with name `N'` iff `N != N'`.
+     *
+     * @param name The name of the distinct object. Must start and end with a double quote, i.e.,
+     *             `name = "<somename>"`.
+     * @note Names of distinct objects are double quoted; and the double quotes are considered part of its name.
+     *       That means that the DistinctObject `"something"` is different from the [[AtomicTerm]] `something`,
+     *       but may, of course, be equal to it.
+     */
     final case class DistinctObject(name: String) extends Term {
       override def pretty: String = {
         assert(name.startsWith("\"") && name.endsWith("\""), "Distinct object without enclosing double quotes.")
@@ -547,13 +603,44 @@ object TPTP {
       }
       override def symbols: Set[String] = Set(name)
     }
+    /**
+     * A term that represents a number. The numbers are given by a [[Number]] object.
+     *
+     * @param value The [[Number]] as a TFF term.
+     */
     final case class NumberTerm(value: Number) extends Term {
       override def pretty: String = value.pretty
       override def symbols: Set[String] = Set.empty
     }
+
+    // The following entries are for TFX and can be ignored for everyone not wanting to support it.
+    /**
+     * A tuple as TFF term. Terms of this kind can safely be ignored
+     * if TFX is not planned to be supported; and they will never be created by the [[leo.modules.input.TPTPParser]]
+     * for inputs that are non-TFX TFF formulas inputs.
+     *
+     * @param elements The entries of the tuple.
+     */
     final case class Tuple(elements: Seq[Term]) extends Term {
       override def pretty: String = s"[${elements.map(_.pretty).mkString(",")}]"
       override def symbols: Set[String] = elements.flatMap(_.symbols).toSet
+    }
+
+    /**
+     * A formula in term position as used in TFX (FOOL logic). Terms of this kind can safely be ignored
+     * if TFX is not planned to be supported; and they will never be created by the [[leo.modules.input.TPTPParser]]
+     * for inputs that are non-TFX TFF formulas inputs.
+     *
+     * @param formula The [[Formula]] in term position.
+     * @note The [[leo.modules.input.TPTPParser]] will never yield expressions containing [[FormulaTerm]]s
+     *       that themself wrap single (formula) variables, i.e., the expression {{{FormulaTerm(FormulaVariable(x))}}}
+     *       is never created. Instead, an equivalent term expression {{{Variable(x)}}} is created (also for
+     *       variables that are Boolean-typed variables). Of course, you may create such instances and handle them
+     *       equivalently in your application.
+     */
+    final case class FormulaTerm(formula: Formula) extends Term {
+      override def pretty: String = formula.pretty
+      override def symbols: Set[String] = formula.symbols
     }
 
     sealed abstract class Connective {
