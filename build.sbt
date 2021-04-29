@@ -41,3 +41,6 @@ lazy val tptpParser = (project in file("."))
 
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.5" % "test"
   )
+  .enablePlugins(ScalaJSPlugin)
+
+scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.ESModule) }
