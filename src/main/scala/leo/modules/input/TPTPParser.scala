@@ -8,6 +8,7 @@ import leo.datastructures.TPTP.TCFAnnotated
 import java.util.NoSuchElementException
 import scala.annotation.tailrec
 import scala.io.Source
+import scala.scalajs.js.annotation.{JSExportAll, JSExportTopLevel}
 
 /**
  *
@@ -54,6 +55,8 @@ import scala.io.Source
  * @note Limitations: Currently, FOOL logic (i.e., TFX) cannot be parsed.
  * @since January 2021
  */
+@JSExportTopLevel("TPTPParser")
+@JSExportAll
 object TPTPParser {
   import datastructures.TPTP.{Problem, AnnotatedFormula, THFAnnotated, TFFAnnotated,
     FOFAnnotated, CNFAnnotated, TPIAnnotated}

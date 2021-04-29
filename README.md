@@ -45,6 +45,19 @@ libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.3"
 ### Non-sbt-projects
 In order to use the library with a non-sbt project, you can simply compile the library and use the class files as an unmanaged dependency/class path. The latest release JAR can also be downloaded from the Maven Central link above.
 
+#### ScalaJS
+This project supports very basic (and untested) export to JavaScript ESModule using [ScalaJS](https://www.scala-js.org/).
+
+To compile an unoptimized version use `sbt fastLinkJS`, for an optimized version `sbt fullLinkJS`.
+
+To use it in your code import the TPTPParser Object:
+
+```javascript
+    import {TPTPParser} from "./main.js";
+    
+    console.log(TPTPParser.annotatedTHF("thf(f, axiom, ![X:$i]: (p @ X))."));
+```
+
 ## Usage
 The parser object `TPTPParser` offers several methods for parsing TPTP problems, annotated formulas or simple formulas. The input is transformed into an
 abstract syntax tree (AST) provided at `leo.datastructures.TPTP`. The ASTs are mostly case classes that can be further processed by pattern matching.

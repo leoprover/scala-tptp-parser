@@ -1,0 +1,24 @@
+# Build JS files using https://www.scala-js.org/
+name: ScalaJS
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+jobs:
+  build-scala-js:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+    - name: Setup Scala
+      uses: olafurpg/setup-scala@v10
+      with:
+        java-version: "adopt@1.8"
+    - name: Build and Test
+      run: sbt -v -Dfile.encoding=UTF-8 +fullLinkJS
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2
+      with:
+         name: scala-js
+         path: target/scala-2.13/scala-tptp-parser-opt/

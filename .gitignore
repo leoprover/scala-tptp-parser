@@ -28,3 +28,7 @@ bin/*
 *.swp
 *~
 ext_config
+
+
+# OSX
+.DS_Store
