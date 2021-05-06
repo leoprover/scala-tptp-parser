@@ -519,11 +519,11 @@ object TPTP {
       override def pretty: String = name
       override def symbols: Set[String] = Set.empty
     }
-    final case class ConditionalTerm(condition: Formula, thn: Term, els: Term) extends Formula {
+    final case class ConditionalFormula(condition: Formula, thn: Term, els: Term) extends Formula {
       override def pretty: String = s"$$ite(${condition.pretty}, ${thn.pretty}, ${els.pretty})"
       override def symbols: Set[String] = condition.symbols ++ thn.symbols ++ els.symbols
     }
-    final case class LetTerm(typing: Map[String, Type], binding: Seq[(Term, Term)], body: Term) extends Formula {
+    final case class LetFormula(typing: Map[String, Type], binding: Seq[(Term, Term)], body: Term) extends Formula {
       override def pretty: String = {
         val typeBinding0 = typing.map(t => s"${escapeAtomicWord(t._1)}:${t._2.pretty}").mkString(",")
         val typeBinding = if (typing.size == 1) typeBinding0 else s"[$typeBinding0]"

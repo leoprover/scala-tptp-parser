@@ -19,20 +19,21 @@ class ParserTestSuite   extends AnyFunSuite {
   private val source = getClass.getResource("/").getPath
 
   private val problems = Seq(
-    "SYN000-1.p" -> "TPTP CNF basic syntax features",
-    "SYN000-1-TCF.p" -> "TPTP TCF basic syntax (improvised)",
-    "SYN000+1.p" -> "TPTP FOF basic syntax features",
-    "SYN000_1.p" -> "TPTP TF0 basic syntax features",
-    "SYN000^1.p" -> "TPTP THF basic syntax features",
-    "SYN000-2.p" -> "TPTP CNF advanced syntax features",
-    "SYN000-2-TCF.p" -> "TPTP TCF advanced syntax (improvised)",
-    "SYN000^2.p" -> "TPTP THF advanced syntax features",
-    "SYN000+2.p" -> "TPTP FOF advanced syntax features",
-    "SYN000_2.p" -> "TPTP TF0 advanced syntax features",
-    "SYN000^3.p" -> "TPTP TH1 syntax features",
-    "SYN000_3.p" -> "TPTP TF1 syntax features",
-    "SYN000=2.p" -> "TPTP TFA with arithmetic advanced syntax features",
-    "SYN000~1.p" -> "Modal THF format with logic specification"
+//    "SYN000-1.p" -> "TPTP CNF basic syntax features",
+//    "SYN000-1-TCF.p" -> "TPTP TCF basic syntax (improvised)",
+//    "SYN000+1.p" -> "TPTP FOF basic syntax features",
+//    "SYN000_1.p" -> "TPTP TF0 basic syntax features",
+//    "SYN000^1.p" -> "TPTP THF basic syntax features",
+//    "SYN000-2.p" -> "TPTP CNF advanced syntax features",
+//    "SYN000-2-TCF.p" -> "TPTP TCF advanced syntax (improvised)",
+//    "SYN000^2.p" -> "TPTP THF advanced syntax features",
+//    "SYN000+2.p" -> "TPTP FOF advanced syntax features",
+//    "SYN000_2.p" -> "TPTP TF0 advanced syntax features",
+//    "SYN000^3.p" -> "TPTP TH1 syntax features",
+//    "SYN000_3.p" -> "TPTP TF1 syntax features",
+//    "SYN000=2.p" -> "TPTP TFA with arithmetic advanced syntax features",
+    "SYN000_4.p" -> "TPTP TFX syntax features"//,
+//    "SYN000~1.p" -> "Modal THF format with logic specification"
   )
 
   for (p <- problems) {

@@ -23,24 +23,24 @@ tff(q1_type,type,q1: ($int * $i) > $o ).
 
 tff(me_type,type,me: $i ).
 
-tff(fool_1,axiom,! [X: $int] : p1(me,! [Y: $i] : q1(X,Y),27) ).
+%tff(fool_1,axiom,! [X: $int] : p1(me,! [Y: $i] : q1(X,Y),27) ).
 
 tff(p2_type,type,p2: $i > $o ).
 
 tff(q2_type,type,q2: $o > $o ).
 
-tff(fool_2,axiom,q2((~p2(me)) != q2(me)) ).
+%tff(fool_2,axiom,q2((~p2(me)) != q2(me)) ).
 
 %----Tuples with Booleans
 tff(pt1_type,type,pt1: ([$int,$i,$o] * $o * $int) > $o ).
 
 tff(qt1_type,type,qt1: ($int * $i) > $o ).
 
-tff(tuples_1,axiom,
-    ! [X: $int] : 
-      pt1([33,me,$true],
-        ! [Y: $i] : qt1(X,Y),
-        27) ).
+%tff(tuples_1,axiom,
+%    ! [X: $int] :
+%      pt1([33,me,$true],
+%        ! [Y: $i] : qt1(X,Y),
+%        27) ).
 
 %----Conditional expressions
 tff(pc1_type,type,pc1: $int > $o).
