@@ -590,7 +590,10 @@ object TPTP {
       def pretty: String
     }
     final case class AtomicType(name: String, args: Seq[Type]) extends Type {
-      override def pretty: String = if (args.isEmpty) name else s"$name(${args.map(_.pretty).mkString(",")})"
+      override def pretty: String = {
+        val escapedName = if (name.startsWith("$") || name.startsWith("$$")) name else escapeAtomicWord(name)
+        if (args.isEmpty) escapedName else s"$escapedName(${args.map(_.pretty).mkString(",")})"
+      }
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet + name
     }
     final case class MappingType(left: Seq[Type], right: Type) extends Type { // right-assoc
