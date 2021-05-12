@@ -129,9 +129,9 @@ object TPTPParser {
     * @return The parsing result as [[TFFAnnotated]] object
     * @throws TPTPParseException If an parsing error occurred.
     */
-  final def annotatedTFF(annotatedFormula: String): TFFAnnotated = {
+  final def annotatedTFF(annotatedFormula: String, tfx: Boolean = true): TFFAnnotated = {
     val parser = parserFromString(annotatedFormula)
-    val result = parser.annotatedTFF()
+    val result = parser.annotatedTFF(tfx)
     parser.EOF()
     result
   }
@@ -208,9 +208,9 @@ object TPTPParser {
     * @return The parsing resultas [[TFFFormula]] object
     * @throws TPTPParseException If an parsing error occurred.
     */
-  final def tff(formula: String): TFFFormula = {
+  final def tff(formula: String, tfx: Boolean = true): TFFFormula = {
     val parser = parserFromString(formula)
-    val result = parser.tffLogicFormula()
+    val result = parser.tffLogicFormula(tfx)
     parser.EOF()
     result
   }
@@ -742,7 +742,7 @@ object TPTPParser {
         case LOWERWORD =>
           t._2 match {
             case "thf" => annotatedTHF()
-            case "tff" => annotatedTFF()
+            case "tff" => annotatedTFF(tfx = true)
             case "fof" => annotatedFOF()
             case "cnf" => annotatedCNF()
             case "tcf" => annotatedTCF()
@@ -1205,14 +1205,14 @@ object TPTPParser {
     ////////////////////////////////////////////////////////////////////////
     // Formula level
     ////////////////////////////////////////////////////////////////////////
-    def annotatedTFF(): TFFAnnotated = {
+    def annotatedTFF(tfx: Boolean): TFFAnnotated = {
       m(a(LOWERWORD), "tff")
       a(LPAREN)
       val n = name()
       a(COMMA)
       val r = a(LOWERWORD)._2
       a(COMMA)
-      val f = tffFormula()
+      val f = tffFormula(tfx)
       var source: GeneralTerm = null
       var info: Seq[GeneralTerm] = null
       val an0 = o(COMMA, null)
@@ -1229,14 +1229,14 @@ object TPTPParser {
       else TFFAnnotated(n, r, f, Some((source, Option(info))))
     }
 
-    def tffFormula(): TFF.Statement = {
+    def tffFormula(tfx: Boolean): TFF.Statement = {
       val idx = peekUnder(LPAREN)
       val tok = peek(idx)
       tok._1 match {
         case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD if peek(idx+1)._1 == COLON => // Typing
           tffAtomTyping()
         case _ =>
-          TFF.Logical(tffLogicFormula())
+          TFF.Logical(tffLogicFormula(tfx))
       }
     }
 
@@ -1254,17 +1254,17 @@ object TPTPParser {
       }
     }
 
-    def tffLogicFormula(): TFF.Formula = {
+    def tffLogicFormula(tfx: Boolean): TFF.Formula = {
       // To allow := bindings with arbitrary formulas (w/o parentheses), i.e., have := very low binding strength
-      val f1 = tffLogicFormula0()
+      val f1 = tffLogicFormula0(tfx)
       if (o(ASSIGNMENT, null) != null) {
-        val f2 = tffLogicFormula0()
+        val f2 = tffLogicFormula0(tfx)
         TFF.BinaryFormula(TFF.:=, f1, f2)
       } else f1
     }
 
-    private[this] def tffLogicFormula0(): TFF.Formula = {
-      val f1 = tffUnitFormula()
+    private[this] def tffLogicFormula0(tfx: Boolean): TFF.Formula = {
+      val f1 = tffUnitFormula(tfx)
       if (tokens.hasNext) {
         val next = peek()
         next._1 match {
@@ -1272,19 +1272,19 @@ object TPTPParser {
             if (isBinaryAssocConnective(c)) {
               val opTok = consume()
               val op = tokenToTFFBinaryConnective(opTok)
-              val f2 = tffUnitFormula()
+              val f2 = tffUnitFormula(tfx)
               // collect all further formulas with same associative operator
               var fs: Seq[TFF.Formula] = Vector(f1,f2)
               while (peek()._1 == opTok._1) {
                 consume()
-                val f = tffUnitFormula()
+                val f = tffUnitFormula(tfx)
                 fs = fs :+ f
               }
               fs.reduceRight((x,y) => TFF.BinaryFormula(op, x, y))
             } else {
               // non-assoc; just parse one more unit and then done.
               val op = tokenToTFFBinaryConnective(consume())
-              val f2 = tffUnitFormula()
+              val f2 = tffUnitFormula(tfx)
               TFF.BinaryFormula(op, f1, f2)
             }
           case _ => f1
@@ -1292,18 +1292,18 @@ object TPTPParser {
       } else f1
     }
 
-    private[this] def tffUnitFormula(): TFF.Formula = {
+    private[this] def tffUnitFormula(tfx: Boolean): TFF.Formula = {
       val tok = peek()
 
       tok._1 match {
         case LPAREN =>
           consume()
-          val f = tffLogicFormula()
+          val f = tffLogicFormula(tfx)
           a(RPAREN)
           f
         case c if isUnaryConnective(c) =>
           val connective = tokenToTFFUnaryConnective(consume())
-          val body = tffUnitFormula()
+          val body = tffUnitFormula(tfx)
           TFF.UnaryFormula(connective, body)
         case q if isQuantifier(q) =>
           val quantifier = tokenToTFFQuantifier(consume())
@@ -1315,11 +1315,11 @@ object TPTPParser {
           }
           a(RBRACKET)
           a(COLON)
-          val body = tffUnitFormula()
+          val body = tffUnitFormula(tfx)
           TFF.QuantifiedFormula(quantifier, names, body)
 
         // TFX only
-        case DOLLARWORD if tok._2 == "$let" =>
+        case DOLLARWORD if tok._2 == "$let" && tfx =>
           consume()
           a(LPAREN)
           // types
@@ -1341,66 +1341,67 @@ object TPTPParser {
           // bindings
           var definitions: Seq[(TFF.Term, TFF.Term)] = Seq.empty
           if (o(LBRACKET, null) == null) {
-            val leftSide = tffTerm() // TODO: Actually this should only be tuples or atomic formula
+            val leftSide = tffTerm(tfx) // TODO: Actually this should only be tuples or atomic formula
             a(ASSIGNMENT)
-            val rightSide = tffTerm()
+            val rightSide = tffTerm(tfx)
             definitions = definitions :+ (leftSide, rightSide)
           } else {
-            val leftSide = tffTerm() // TODO: Actually this should only be tuples or atomic formula
+            val leftSide = tffTerm(tfx) // TODO: Actually this should only be tuples or atomic formula
             a(ASSIGNMENT)
-            val rightSide = tffTerm()
+            val rightSide = tffTerm(tfx)
             definitions = definitions :+ (leftSide, rightSide)
             while (o(COMMA, null) != null) {
-              val leftSideN = tffTerm() // TODO: Actually this should only be tuples or atomic formula
+              val leftSideN = tffTerm(tfx) // TODO: Actually this should only be tuples or atomic formula
               a(ASSIGNMENT)
-              val rightSideN = tffTerm()
+              val rightSideN = tffTerm(tfx)
               definitions = definitions :+ (leftSideN, rightSideN)
             }
             a(RBRACKET)
           }
           a(COMMA)
-          val body = tffTerm()
+          val body = tffTerm(tfx)
           a(RPAREN)
           TFF.LetFormula(tyMap, definitions, body)
 
         // TFX only
-        case DOLLARWORD if tok._2 == "$ite" =>
+        case DOLLARWORD if tok._2 == "$ite" && tfx =>
           consume()
           a(LPAREN)
-          val cond = tffLogicFormula()
+          val cond = tffLogicFormula(tfx)
           a(COMMA)
-          val thn = tffTerm()
+          val thn = tffTerm(tfx)
           a(COMMA)
-          val els = tffTerm()
+          val els = tffTerm(tfx)
           a(RPAREN)
           TFF.ConditionalFormula(cond, thn, els)
 
         case LOWERWORD | UPPERWORD | DOLLARWORD | DOLLARDOLLARWORD | SINGLEQUOTED | DOUBLEQUOTED | INT | RATIONAL | REAL =>
           // These are tff_atomic_formula and tfx_unitary formula
-          val term1 = tffTerm()
+          val term1 = tffTerm(tfx)
           // expect = and != still, if any
           if (tokens.hasNext) {
             val nextTok = peek()
             nextTok._1 match {
               case EQUALS =>
                 consume()
-                val right = tffTerm()
+                val right = tffTerm(tfx)
                 TFF.Equality(term1,right)
               case NOTEQUALS =>
                 consume()
-                val right = tffTerm()
+                val right = tffTerm(tfx)
                 TFF.Inequality(term1,right)
-              case _ => tffTermToFormula(term1, nextTok) // Formula level, so lift term (if possible)
+              case _ => tffTermToFormula(term1, nextTok, tfx) // Formula level, so lift term (if possible)
             }
-          } else tffTermToFormula(term1, tok) // Formula level, so lift term (if possible)
+          } else tffTermToFormula(term1, tok, tfx) // Formula level, so lift term (if possible)
         case _ => error2(s"Unrecognized tff formula input '${tok._1}'", tok)
       }
     }
-    @inline private[this] def tffTermToFormula(term: TFF.Term, tokenReference: Token): TFF.Formula = {
+    @inline private[this] def tffTermToFormula(term: TFF.Term, tokenReference: Token, tfx: Boolean): TFF.Formula = {
       term match {
         case TFF.AtomicTerm(f, args) => TFF.AtomicFormula(f, args)
         // TFX only: Variable
-        case TFF.Variable(name) => TFF.FormulaVariable(name)
+        case TFF.Variable(name) if tfx => TFF.FormulaVariable(name)
+        case TFF.Variable(name) if !tfx   => error2(s"Parse error: Unexpected variable '$name' at formula level in non-TFX mode", tokenReference)
         case _ => error2("Parse error: Unexpected term at formula level", tokenReference)
       }
     }
@@ -1413,7 +1414,7 @@ object TPTPParser {
       } else (variableName, None)
     }
 
-    def tffTerm(): TFF.Term = {
+    def tffTerm(tfx: Boolean): TFF.Term = {
       val tok = peek()
       tok._1 match {
         case INT | RATIONAL | REAL =>
@@ -1426,21 +1427,21 @@ object TPTPParser {
           val fn = consume()._2
           var args: Seq[TFF.Term] = Vector.empty
           if (o(LPAREN, null) != null) {
-            args = args :+ tffTerm()
+            args = args :+ tffTerm(tfx)
             while (o(COMMA, null) != null) {
-              args = args :+ tffTerm()
+              args = args :+ tffTerm(tfx)
             }
             a(RPAREN)
           }
           TFF.AtomicTerm(fn, args)
 
         // TFX only
-        case LBRACKET => // Tuple
+        case LBRACKET if tfx => // Tuple
           consume()
           if (o(RBRACKET, null) == null) {
-            var entries: Seq[TFF.Term] = Vector(tffTerm())
+            var entries: Seq[TFF.Term] = Vector(tffTerm(tfx))
             while (o(COMMA, null) != null) {
-              entries = entries :+ tffTerm()
+              entries = entries :+ tffTerm(tfx)
             }
             a(RBRACKET)
             TFF.Tuple(entries)
@@ -1448,7 +1449,9 @@ object TPTPParser {
             // empty tuple
             TFF.Tuple(Seq.empty)
           }
-        case _ => error(Seq(INT, RATIONAL, REAL, DOUBLEQUOTED, UPPERWORD, LOWERWORD, SINGLEQUOTED, DOLLARWORD, DOLLARDOLLARWORD, LBRACKET), tok)
+        case _ =>
+          if (tfx) error(Seq(INT, RATIONAL, REAL, DOUBLEQUOTED, UPPERWORD, LOWERWORD, SINGLEQUOTED, DOLLARWORD, DOLLARDOLLARWORD, LBRACKET), tok)
+          else error(Seq(INT, RATIONAL, REAL, DOUBLEQUOTED, UPPERWORD, LOWERWORD, SINGLEQUOTED, DOLLARWORD, DOLLARDOLLARWORD), tok)
       }
     }
 
@@ -2045,7 +2048,7 @@ object TPTPParser {
             case "$tff" =>
               consume()
               a(LPAREN)
-              val f = tffFormula()
+              val f = tffFormula(tfx = true)
               a(RPAREN)
               GeneralFormulaData(TFFData(f))
             case "$fof" =>
