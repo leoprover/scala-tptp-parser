@@ -1417,6 +1417,11 @@ object TPTPParser {
     def tffTerm(tfx: Boolean): TFF.Term = {
       val tok = peek()
       tok._1 match {
+        case LPAREN =>
+          consume()
+          val res = tffTerm(tfx)
+          a(RPAREN)
+          res
         case INT | RATIONAL | REAL =>
           TFF.NumberTerm(number())
         case DOUBLEQUOTED =>
