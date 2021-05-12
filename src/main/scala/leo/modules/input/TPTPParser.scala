@@ -1265,29 +1265,31 @@ object TPTPParser {
 
     private[this] def tffLogicFormula0(): TFF.Formula = {
       val f1 = tffUnitFormula()
-      val next = peek()
-      next._1 match {
-        case c if isBinaryConnective(c)  =>
-          if (isBinaryAssocConnective(c)) {
-            val opTok = consume()
-            val op = tokenToTFFBinaryConnective(opTok)
-            val f2 = tffUnitFormula()
-            // collect all further formulas with same associative operator
-            var fs: Seq[TFF.Formula] = Vector(f1,f2)
-            while (peek()._1 == opTok._1) {
-              consume()
-              val f = tffUnitFormula()
-              fs = fs :+ f
+      if (tokens.hasNext) {
+        val next = peek()
+        next._1 match {
+          case c if isBinaryConnective(c)  =>
+            if (isBinaryAssocConnective(c)) {
+              val opTok = consume()
+              val op = tokenToTFFBinaryConnective(opTok)
+              val f2 = tffUnitFormula()
+              // collect all further formulas with same associative operator
+              var fs: Seq[TFF.Formula] = Vector(f1,f2)
+              while (peek()._1 == opTok._1) {
+                consume()
+                val f = tffUnitFormula()
+                fs = fs :+ f
+              }
+              fs.reduceRight((x,y) => TFF.BinaryFormula(op, x, y))
+            } else {
+              // non-assoc; just parse one more unit and then done.
+              val op = tokenToTFFBinaryConnective(consume())
+              val f2 = tffUnitFormula()
+              TFF.BinaryFormula(op, f1, f2)
             }
-            fs.reduceRight((x,y) => TFF.BinaryFormula(op, x, y))
-          } else {
-            // non-assoc; just parse one more unit and then done.
-            val op = tokenToTFFBinaryConnective(consume())
-            val f2 = tffUnitFormula()
-            TFF.BinaryFormula(op, f1, f2)
-          }
-        case _ => f1
-      }
+          case _ => f1
+        }
+      } else f1
     }
 
     private[this] def tffUnitFormula(): TFF.Formula = {
@@ -1376,26 +1378,30 @@ object TPTPParser {
         case LOWERWORD | UPPERWORD | DOLLARWORD | DOLLARDOLLARWORD | SINGLEQUOTED | DOUBLEQUOTED | INT | RATIONAL | REAL =>
           // These are tff_atomic_formula and tfx_unitary formula
           val term1 = tffTerm()
-          // expect = and != still
-          val nextTok = peek()
-          nextTok._1 match {
-            case EQUALS =>
-              consume()
-              val right = tffTerm()
-              TFF.Equality(term1,right)
-            case NOTEQUALS =>
-              consume()
-              val right = tffTerm()
-              TFF.Inequality(term1,right)
-            case _ =>
-              term1 match {
-                case TFF.AtomicTerm(f, args) => TFF.AtomicFormula(f, args)
-                // TFX only: Variable
-                case TFF.Variable(name) => TFF.FormulaVariable(name)
-                case _ => error2("Parse error: Unexpected term at formula level", nextTok)
-              }
-          }
+          // expect = and != still, if any
+          if (tokens.hasNext) {
+            val nextTok = peek()
+            nextTok._1 match {
+              case EQUALS =>
+                consume()
+                val right = tffTerm()
+                TFF.Equality(term1,right)
+              case NOTEQUALS =>
+                consume()
+                val right = tffTerm()
+                TFF.Inequality(term1,right)
+              case _ => tffTermToFormula(term1, nextTok) // Formula level, so lift term (if possible)
+            }
+          } else tffTermToFormula(term1, tok) // Formula level, so lift term (if possible)
         case _ => error2(s"Unrecognized tff formula input '${tok._1}'", tok)
+      }
+    }
+    @inline private[this] def tffTermToFormula(term: TFF.Term, tokenReference: Token): TFF.Formula = {
+      term match {
+        case TFF.AtomicTerm(f, args) => TFF.AtomicFormula(f, args)
+        // TFX only: Variable
+        case TFF.Variable(name) => TFF.FormulaVariable(name)
+        case _ => error2("Parse error: Unexpected term at formula level", tokenReference)
       }
     }
 
@@ -1610,29 +1616,31 @@ object TPTPParser {
 
     def fofLogicFormula(): FOF.Formula = {
       val f1 = fofUnitFormula()
-      val next = peek()
-      next._1 match {
-        case c if isBinaryConnective(c)  =>
-          if (isBinaryAssocConnective(c)) {
-            val opTok = consume()
-            val op = tokenToFOFBinaryConnective(opTok)
-            val f2 = fofUnitFormula()
-            // collect all further formulas with same associative operator
-            var fs: Seq[FOF.Formula] = Vector(f1,f2)
-            while (peek()._1 == opTok._1) {
-              consume()
-              val f = fofUnitFormula()
-              fs = fs :+ f
+      if (tokens.hasNext) {
+        val next = peek()
+        next._1 match {
+          case c if isBinaryConnective(c)  =>
+            if (isBinaryAssocConnective(c)) {
+              val opTok = consume()
+              val op = tokenToFOFBinaryConnective(opTok)
+              val f2 = fofUnitFormula()
+              // collect all further formulas with same associative operator
+              var fs: Seq[FOF.Formula] = Vector(f1,f2)
+              while (peek()._1 == opTok._1) {
+                consume()
+                val f = fofUnitFormula()
+                fs = fs :+ f
+              }
+              fs.reduceRight((x,y) => FOF.BinaryFormula(op, x, y))
+            } else {
+              // non-assoc; just parse one more unit and then done.
+              val op = tokenToFOFBinaryConnective(consume())
+              val f2 = fofUnitFormula()
+              FOF.BinaryFormula(op, f1, f2)
             }
-            fs.reduceRight((x,y) => FOF.BinaryFormula(op, x, y))
-          } else {
-            // non-assoc; just parse one more unit and then done.
-            val op = tokenToFOFBinaryConnective(consume())
-            val f2 = fofUnitFormula()
-            FOF.BinaryFormula(op, f1, f2)
-          }
-        case _ => f1
-      }
+          case _ => f1
+        }
+      } else f1
     }
 
     def fofUnitFormula(): FOF.Formula = {
@@ -1662,24 +1670,28 @@ object TPTPParser {
           FOF.QuantifiedFormula(quantifier, names, body)
         case LOWERWORD | UPPERWORD | DOLLARWORD | DOLLARDOLLARWORD | SINGLEQUOTED | DOUBLEQUOTED | INT | RATIONAL | REAL =>
           val term1 = fofTerm()
-          // expect = and != still
-          val nextTok = peek()
-          nextTok._1 match {
-            case EQUALS =>
-              consume()
-              val right = fofTerm()
-              FOF.Equality(term1,right)
-            case NOTEQUALS =>
-              consume()
-              val right = fofTerm()
-              FOF.Inequality(term1,right)
-            case _ =>
-              term1 match {
-                case FOF.AtomicTerm(f, args) => FOF.AtomicFormula(f, args)
-                case _ => error2("Parse error: Unexpected term at formula level", nextTok)
-              }
-          }
+          // expect = and != still, if any
+          if (tokens.hasNext) {
+            val nextTok = peek()
+            nextTok._1 match {
+              case EQUALS =>
+                consume()
+                val right = fofTerm()
+                FOF.Equality(term1,right)
+              case NOTEQUALS =>
+                consume()
+                val right = fofTerm()
+                FOF.Inequality(term1,right)
+              case _ => fofTermToFormula(term1, nextTok)
+            }
+          } else fofTermToFormula(term1, tok)
         case _ => error2(s"Unrecognized fof formula input '${tok._1}'", tok)
+      }
+    }
+    @inline private[this] def fofTermToFormula(term: FOF.Term, tokenReference: Token): FOF.Formula = {
+      term match {
+        case FOF.AtomicTerm(f, args) => FOF.AtomicFormula(f, args)
+        case _ => error2("Parse error: Unexpected term at formula level", tokenReference)
       }
     }
 
@@ -1829,29 +1841,31 @@ object TPTPParser {
         case SINGLEQUOTED | LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD | DOUBLEQUOTED | UPPERWORD =>
           // parse term. if = or != comes, take another. else return (if not variable/double quoted)
           val term1 = cnfTerm()
-          val tok2 = peek()
-          tok2._1 match {
-            case EQUALS =>
-              consume()
-              val term2 = cnfTerm()
-              CNF.Equality(term1, term2)
-            case NOTEQUALS =>
-              consume()
-              val term2 = cnfTerm()
-              CNF.Inequality(term1, term2)
-            case _ => term1 match {
-              case CNF.AtomicTerm(f, args) => CNF.PositiveAtomic(CNF.AtomicFormula(f, args))
-              case _ => error2(s"Parse error: Unexpected term (variable or distinct object) when formula was expected", lastTok)
+          if (tokens.hasNext) {
+            val tok2 = peek()
+            tok2._1 match {
+              case EQUALS =>
+                consume()
+                val term2 = cnfTerm()
+                CNF.Equality(term1, term2)
+              case NOTEQUALS =>
+                consume()
+                val term2 = cnfTerm()
+                CNF.Inequality(term1, term2)
+              case _ => CNF.PositiveAtomic(cnfTermToFormula(term1, lastTok))
             }
-          }
+          } else CNF.PositiveAtomic(cnfTermToFormula(term1, lastTok))
         case NOT =>
           consume()
           val formula = cnfTerm()
-          formula match {
-            case CNF.AtomicTerm(f, args) => CNF.NegativeAtomic(CNF.AtomicFormula(f, args))
-            case _ => error2(s"Parse error: Unexpected term (variable or distinct object) after negation", lastTok)
-          }
+          CNF.NegativeAtomic(cnfTermToFormula(formula, lastTok))
         case _ => error(Seq(SINGLEQUOTED, LOWERWORD, DOLLARWORD, DOLLARDOLLARWORD, DOUBLEQUOTED, UPPERWORD, NOT), tok)
+      }
+    }
+    @inline private[this] def cnfTermToFormula(term: CNF.Term, tokenReference: Token): CNF.AtomicFormula = {
+      term match {
+        case CNF.AtomicTerm(f, args) => CNF.AtomicFormula(f, args)
+        case _ => error2("Parse error: Unexpected term at formula level", tokenReference)
       }
     }
 
