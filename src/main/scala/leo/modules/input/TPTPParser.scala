@@ -1267,7 +1267,7 @@ object TPTPParser {
               val f2 = tffUnitFormula()
               // collect all further formulas with same associative operator
               var fs: Seq[TFF.Formula] = Vector(f1,f2)
-              while (peek()._1 == opTok._1) {
+              while (tokens.hasNext && peek()._1 == opTok._1) {
                 consume()
                 val f = tffUnitFormula()
                 fs = fs :+ f
@@ -1555,7 +1555,7 @@ object TPTPParser {
               val f2 = fofUnitFormula()
               // collect all further formulas with same associative operator
               var fs: Seq[FOF.Formula] = Vector(f1,f2)
-              while (peek()._1 == opTok._1) {
+              while (tokens.hasNext && peek()._1 == opTok._1) {
                 consume()
                 val f = fofUnitFormula()
                 fs = fs :+ f
