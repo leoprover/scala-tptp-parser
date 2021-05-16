@@ -643,7 +643,7 @@ object TPTP {
      *       Of course, users may create such instances and handle them appropriately in their application.
      */
     final case class FormulaTerm(formula: Formula) extends Term {
-      override def pretty: String = formula.pretty
+      override def pretty: String = s"(${formula.pretty})"
       override def symbols: Set[String] = formula.symbols
     }
 
