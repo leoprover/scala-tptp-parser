@@ -1558,35 +1558,38 @@ object TPTPParser {
     // so I need to take the ugly approach: that's life ...
     private[this] def tffLogicFormulaOrTerm0(): TFF.Term = {
       val f1 = tffUnitFormulaOrTerm(acceptEqualityLike = true)
-      f1 match {
-        case TFF.FormulaTerm(formula) =>
-          if (tokens.hasNext) {
-            val next = peek()
-            next._1 match {
-              case c if isBinaryConnective(c)  =>
-                if (isBinaryAssocConnective(c)) {
-                  val opTok = consume()
-                  val op = tokenToTFFBinaryConnective(opTok)
-                  val f2 = tffUnitFormula(tfx = true, acceptEqualityLike = true)
-                  // collect all further formulas with same associative operator
-                  var fs: Seq[TFF.Formula] = Vector(formula,f2)
-                  while (tokens.hasNext && peek()._1 == opTok._1) {
-                    consume()
-                    val f = tffUnitFormula(tfx = true, acceptEqualityLike = true)
-                    fs = fs :+ f
-                  }
-                  TFF.FormulaTerm(fs.reduceRight((x,y) => TFF.BinaryFormula(op, x, y)))
-                } else {
-                  // non-assoc; just parse one more unit and then done.
-                  val op = tokenToTFFBinaryConnective(consume())
-                  val f2 = tffUnitFormula(tfx = true, acceptEqualityLike = true)
-                  TFF.FormulaTerm(TFF.BinaryFormula(op, formula, f2))
-                }
-              case _ => f1
+      if (tokens.hasNext) {
+        val next = peek()
+        next._1 match {
+          case c if isBinaryConnective(c)  =>
+            // convert f1 to a formula, if possible
+            val formula = f1 match {
+              case TFF.FormulaTerm(formula0) => formula0
+              case TFF.AtomicTerm(f, args) => TFF.AtomicFormula(f, args)
+              case TFF.Variable(name) => TFF.FormulaVariable(name)
+              case _ => error2(s"Found binary connective '${next._1}' but read non-formula term '${f1.pretty}' first.", next)
             }
-          } else f1
-        case _ => f1
-      }
+            if (isBinaryAssocConnective(c)) {
+              val opTok = consume()
+              val op = tokenToTFFBinaryConnective(opTok)
+              val f2 = tffUnitFormula(tfx = true, acceptEqualityLike = true)
+              // collect all further formulas with same associative operator
+              var fs: Seq[TFF.Formula] = Vector(formula,f2)
+              while (tokens.hasNext && peek()._1 == opTok._1) {
+                consume()
+                val f = tffUnitFormula(tfx = true, acceptEqualityLike = true)
+                fs = fs :+ f
+              }
+              TFF.FormulaTerm(fs.reduceRight((x,y) => TFF.BinaryFormula(op, x, y)))
+            } else {
+              // non-assoc; just parse one more unit and then done.
+              val op = tokenToTFFBinaryConnective(consume())
+              val f2 = tffUnitFormula(tfx = true, acceptEqualityLike = true)
+              TFF.FormulaTerm(TFF.BinaryFormula(op, formula, f2))
+            }
+          case _ => f1
+        }
+      } else f1
     }
 
     private[this] def tffUnitFormulaOrTerm(acceptEqualityLike: Boolean): TFF.Term = {
