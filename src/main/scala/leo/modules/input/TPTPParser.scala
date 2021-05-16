@@ -1378,7 +1378,24 @@ object TPTPParser {
           TFF.ConditionalFormula(cond, thn, els)
 
         case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD | SINGLEQUOTED =>
-          tffAtomicFormula(tfx)
+          feasibleForEq = false
+          val formula = tffAtomicFormula(tfx)
+          // might also be an atomicTerm if an equation follows
+          // we check directly, not via outer-level, as otherwise we disallow proper terms
+          if (tokens.hasNext) {
+            val nextTok = peek()
+            nextTok._1 match {
+              case EQUALS =>
+                consume()
+                val right = tffTerm0(tfx)
+                TFF.Equality(TFF.AtomicTerm(formula.f, formula.args), right)
+              case NOTEQUALS =>
+                consume()
+                val right = tffTerm0(tfx)
+                TFF.Inequality(TFF.AtomicTerm(formula.f, formula.args), right)
+              case _ => formula
+            }
+          } else formula
 
         case UPPERWORD =>
           feasibleForEq = false
