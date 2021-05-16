@@ -13,7 +13,7 @@ import scala.io.Source
  *
  * Parser for TPTP-based input languages for automated theorem proving, including ...
  *   - THF (TH0/TH1): Monomorphic and polymorphic higher-order logic,
- *   - TFF (TF0/TF1): Monomorphic and polymorphic typed first-order logic,
+ *   - TFF (TF0/TF1): Monomorphic and polymorphic typed first-order logic, including extended TFF (TFX),
  *   - FOF: Untyped first-order logic,
  *   - TCF: Typed clause-normal form,
  *   - CNF: (Untyped) clause-normal form, and
@@ -51,7 +51,6 @@ import scala.io.Source
  * @author Alexander Steen
  * @see Original TPTP syntax definition at [[http://tptp.org/TPTP/SyntaxBNF.html]].
  * @note For the implementation of this parser v7.4.0.3 of the TPTP syntax was used.
- * @note Limitations: Currently, FOOL logic (i.e., TFX) cannot be parsed.
  * @since January 2021
  */
 object TPTPParser {
@@ -126,6 +125,7 @@ object TPTPParser {
     * Parses an TPTP TFF annotated formula given as String.
     *
     * @param annotatedFormula The annotated formula as string.
+    * @param tfx If set to `true`, accept TFX formulas as well (default); otherwise exclude TFX inputs.
     * @return The parsing result as [[TFFAnnotated]] object
     * @throws TPTPParseException If an parsing error occurred.
     */
@@ -205,6 +205,7 @@ object TPTPParser {
     * Parses a plain TFF formula (i.e., without annotations) given as String.
     *
     * @param formula The annotated formula as string.
+    * @param tfx If set to `true`, accept TFX formulas as well (default); otherwise exclude TFX inputs.
     * @return The parsing resultas [[TFFFormula]] object
     * @throws TPTPParseException If an parsing error occurred.
     */
@@ -256,6 +257,11 @@ object TPTPParser {
 
   @inline private[this] final def parserFromString(input: String): TPTPParser = new TPTPParser(new TPTPLexer(io.Source.fromString(input)))
 
+  /**
+   * A token stream of [[leo.modules.input.TPTPParser.TPTPLexer.TPTPLexerToken]]s that represents a TPTP input.
+   *
+   * @param input The [[Source]] underlying the token stream
+   */
   final class TPTPLexer(input: Source) extends collection.BufferedIterator[TPTPLexer.TPTPLexerToken] {
     private[this] final lazy val iter = input.buffered
     private[this] var curLine: Int = 1
@@ -762,6 +768,12 @@ object TPTPParser {
     ////////////////////////////////////////////////////////////////////////
     // Formula level
     ////////////////////////////////////////////////////////////////////////
+    /**
+     * Parse an annotated THF formula.
+     *
+     * @return Representation of the annotated formula as [[THFAnnotated]]
+     * @throws TPTPParseException if the underlying input does not represent a valid annotated THF formula
+     */
     def annotatedTHF(): THFAnnotated = {
       m(a(LOWERWORD), "thf")
       a(LPAREN)
@@ -1205,6 +1217,14 @@ object TPTPParser {
     ////////////////////////////////////////////////////////////////////////
     // Formula level
     ////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Parse an annotated TFF formula.
+     *
+     * @param tfx If set to `true`, accept TFX formulas as well (default); otherwise exclude TFX inputs.
+     * @return Representation of the annotated formula as [[TFFAnnotated]]
+     * @throws TPTPParseException if the underlying input does not represent a valid annotated TFF formula
+     */
     def annotatedTFF(tfx: Boolean): TFFAnnotated = {
       m(a(LOWERWORD), "tff")
       a(LPAREN)
@@ -1816,6 +1836,12 @@ object TPTPParser {
     ////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Parse an annotated FOF formula.
+     *
+     * @return Representation of the annotated formula as [[FOFAnnotated]]
+     * @throws TPTPParseException if the underlying input does not represent a valid annotated FOF formula
+     */
     def annotatedFOF(): FOFAnnotated = {
       m(a(LOWERWORD), "fof")
       a(LPAREN)
@@ -1954,6 +1980,12 @@ object TPTPParser {
     ////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Parse an annotated TCF formula.
+     *
+     * @return Representation of the annotated formula as [[TCFAnnotated]]
+     * @throws TPTPParseException if the underlying input does not represent a valid annotated TCF formula
+     */
     def annotatedTCF(): TCFAnnotated = {
       m(a(LOWERWORD), "tcf")
       a(LPAREN)
@@ -2018,6 +2050,12 @@ object TPTPParser {
     ////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Parse an annotated CNF formula.
+     *
+     * @return Representation of the annotated formula as [[CNFAnnotated]]
+     * @throws TPTPParseException if the underlying input does not represent a valid annotated CNF formula
+     */
     def annotatedCNF(): CNFAnnotated = {
       m(a(LOWERWORD), "cnf")
       a(LPAREN)
@@ -2127,6 +2165,12 @@ object TPTPParser {
     ////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Parse an annotated TPI formula.
+     *
+     * @return Representation of the annotated formula as [[TPIAnnotated]]
+     * @throws TPTPParseException if the underlying input does not represent a valid annotated TPI formula
+     */
     def annotatedTPI(): TPIAnnotated = {
       m(a(LOWERWORD), "tpi")
       a(LPAREN)
