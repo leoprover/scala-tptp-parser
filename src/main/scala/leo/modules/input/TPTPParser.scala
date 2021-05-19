@@ -1312,6 +1312,7 @@ object TPTPParser {
       } else f1
     }
 
+    // acceptEqualityLike is dont-care if tfx = false
     private[this] def tffUnitFormula(tfx: Boolean, acceptEqualityLike: Boolean): TFF.Formula = {
       val tok = peek()
       var feasibleForEq = true
@@ -1514,7 +1515,7 @@ object TPTPParser {
 
     // "simple" terms (no formulas as terms), might contain TFX formula terms as arguments/recursively though.
     // used as grounding for recursive calls and for non-TFX mode
-    def tffTerm0(tfx: Boolean): TFF.Term = {
+    private[this] def tffTerm0(tfx: Boolean): TFF.Term = {
       val tok = peek()
       tok._1 match {
         case LPAREN =>
