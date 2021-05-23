@@ -1403,16 +1403,16 @@ object TPTPParser {
           val formula = tffAtomicFormula(tfx)
           // might also be an atomicTerm if an equation follows
           // we check directly, not via outer-level, as otherwise we disallow proper terms
-          if (tokens.hasNext) {
+          if (tokens.hasNext && acceptEqualityLike) {
             val nextTok = peek()
             nextTok._1 match {
               case EQUALS =>
                 consume()
-                val right = tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
                 TFF.Equality(TFF.AtomicTerm(formula.f, formula.args), right)
               case NOTEQUALS =>
                 consume()
-                val right = tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
                 TFF.Inequality(TFF.AtomicTerm(formula.f, formula.args), right)
               case _ => formula
             }
@@ -1423,16 +1423,16 @@ object TPTPParser {
           val variableName = consume()._2
           // Variables can be formulas in TFX mode, otherwise we require an equation
           // directly, not via outer-level, as otherwise we disallow proper terms)
-          if (tokens.hasNext) {
+          if (tokens.hasNext && acceptEqualityLike) {
             val nextTok = peek()
             nextTok._1 match {
               case EQUALS =>
                 consume()
-                val right = tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
                 TFF.Equality(TFF.Variable(variableName), right)
               case NOTEQUALS =>
                 consume()
-                val right = tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
                 TFF.Inequality(TFF.Variable(variableName), right)
               case _ =>
                 if (tfx) TFF.FormulaVariable(variableName)
@@ -1448,16 +1448,16 @@ object TPTPParser {
           val left = tffTerm0(tfx)
           // we require an equation directly (not via outer-level)
           // as otherwise we disallow proper terms
-          if (tokens.hasNext) {
+          if (tokens.hasNext && acceptEqualityLike) {
             val nextTok = peek()
             nextTok._1 match {
               case EQUALS =>
                 consume()
-                val right = tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
                 TFF.Equality(left, right)
               case NOTEQUALS =>
                 consume()
-                val right = tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
                 TFF.Inequality(left, right)
               case _ => error2(s"Parse error: Unexpected term '${left.pretty}' at formula level", tok)
             }
