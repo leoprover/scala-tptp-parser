@@ -344,7 +344,7 @@ object TPTP {
       override def symbols: Set[String] = Set.empty
     }
     final case class UnaryFormula(connective: UnaryConnective, body: Formula) extends Formula {
-      override def pretty: String = s"${connective.pretty} (${body.pretty})"
+      override def pretty: String = s"(${connective.pretty} (${body.pretty}))"
       override def symbols: Set[String] = body.symbols
     }
     final case class BinaryFormula(connective: BinaryConnective, left: Formula, right: Formula) extends Formula {
