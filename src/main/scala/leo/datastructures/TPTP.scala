@@ -531,7 +531,11 @@ object TPTP {
         val termBinding = if (binding.size == 1) termBinding0 else s"[$termBinding0]"
         s"$$let($typeBinding, $termBinding, ${body.pretty})"
       }
-      override def symbols: Set[String] = typing.keySet union body.symbols
+      override def symbols: Set[String] = typing.keySet ++ body.symbols
+    }
+    final case class Assignment(lhs: AtomicTerm, rhs: Term) extends Formula {
+      override def pretty: String = s"(${lhs.pretty}) := (${rhs.pretty})"
+      override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
     }
 
     /**
@@ -670,8 +674,6 @@ object TPTP {
     final case object ~| extends BinaryConnective { override def pretty: String = "~|" }
     /** Negated conjunction */
     final case object ~& extends BinaryConnective { override def pretty: String = "~&" }
-    /** Assignment */
-    final case object := extends BinaryConnective { override def pretty: String = ":=" }
     // assoc
     /** Disjunction */
     final case object | extends BinaryConnective { override def pretty: String = "|" }

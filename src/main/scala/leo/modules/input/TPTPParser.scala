@@ -1275,11 +1275,15 @@ object TPTPParser {
     }
 
     def tffLogicFormula(tfx: Boolean): TFF.Formula = {
-      // To allow := bindings with arbitrary formulas (w/o parentheses), i.e., have := very low binding strength
+      // To allow := bindings with arbitrary formulas (w/o parentheses), i.e., have := a very low binding strength
       val f1 = tffLogicFormula0(tfx)
-      if (o(ASSIGNMENT, null) != null) {
-        val f2 = tffLogicFormula0(tfx)
-        TFF.BinaryFormula(TFF.:=, f1, f2)
+      if (tfx && o(ASSIGNMENT, null) != null) { // Only allow := in TFX mode
+        f1 match {
+          case TFF.AtomicFormula(f, args) =>
+            val f2 = tffLogicFormulaOrTerm() // Terms are more general, since they can also be formulas in TFX
+            TFF.Assignment(TFF.AtomicTerm(f, args), f2)
+          case _ => error2(s"Parse error: Unexpected left-hand side of assignmeht '${f1.pretty}'. Only atomic terms are permitted.", lastTok)
+        }
       } else f1
     }
 
@@ -1329,6 +1333,7 @@ object TPTPParser {
           val body = tffUnitFormula(tfx, acceptEqualityLike = false)
           TFF.UnaryFormula(connective, body)
         case q if isQuantifier(q) =>
+          feasibleForEq = false
           val quantifier = tokenToTFFQuantifier(consume())
           a(LBRACKET)
           val name = typedTFFVariable()
@@ -1390,7 +1395,7 @@ object TPTPParser {
         case DOLLARWORD if tok._2 == "$ite" && tfx =>
           consume()
           a(LPAREN)
-          val cond = tffLogicFormula(tfx)
+          val cond = tffLogicFormula0(tfx)
           a(COMMA)
           val thn = tffTerm(tfx)
           a(COMMA)
@@ -1408,11 +1413,11 @@ object TPTPParser {
             nextTok._1 match {
               case EQUALS =>
                 consume()
-                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm(tfx)
                 TFF.Equality(TFF.AtomicTerm(formula.f, formula.args), right)
               case NOTEQUALS =>
                 consume()
-                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm(tfx)
                 TFF.Inequality(TFF.AtomicTerm(formula.f, formula.args), right)
               case _ => formula
             }
@@ -1428,11 +1433,11 @@ object TPTPParser {
             nextTok._1 match {
               case EQUALS =>
                 consume()
-                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm(tfx)
                 TFF.Equality(TFF.Variable(variableName), right)
               case NOTEQUALS =>
                 consume()
-                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm(tfx)
                 TFF.Inequality(TFF.Variable(variableName), right)
               case _ =>
                 if (tfx) TFF.FormulaVariable(variableName)
@@ -1453,11 +1458,11 @@ object TPTPParser {
             nextTok._1 match {
               case EQUALS =>
                 consume()
-                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm(tfx)
                 TFF.Equality(left, right)
               case NOTEQUALS =>
                 consume()
-                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm0(tfx)
+                val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm(tfx)
                 TFF.Inequality(left, right)
               case _ => error2(s"Parse error: Unexpected term '${left.pretty}' at formula level", tok)
             }
@@ -1509,7 +1514,7 @@ object TPTPParser {
     }
 
     def tffTerm(tfx: Boolean): TFF.Term = {
-      if (tfx) tffLogicFormulaOrTerm0()
+      if (tfx) tffLogicFormulaOrTerm()
       else tffTerm0(tfx)
     }
 
@@ -1557,7 +1562,7 @@ object TPTPParser {
     // I think there is no better solution than to copy the tffLogicFormula0 stuff and generalize to terms; I don't
     // want to introduce more complicated (and possibly slower) constructions on top of the non-TFX case
     // so I need to take the ugly approach: that's life ...
-    private[this] def tffLogicFormulaOrTerm0(): TFF.Term = {
+    private[this] def tffLogicFormulaOrTerm(): TFF.Term = {
       val f1 = tffUnitFormulaOrTerm(acceptEqualityLike = true)
       if (tokens.hasNext) {
         val next = peek()
@@ -1601,7 +1606,7 @@ object TPTPParser {
       val left = tok._1 match {
         case LPAREN =>
           consume()
-          val f = tffLogicFormulaOrTerm0()
+          val f = tffLogicFormulaOrTerm()
           a(RPAREN)
           f
         case c if isUnaryConnective(c) =>
@@ -1610,6 +1615,7 @@ object TPTPParser {
           val body = tffUnitFormula(tfx, acceptEqualityLike = false)
           TFF.FormulaTerm(TFF.UnaryFormula(connective, body))
         case q if isQuantifier(q) =>
+          feasibleForEq = false
           val quantifier = tokenToTFFQuantifier(consume())
           a(LBRACKET)
           val name = typedTFFVariable()
