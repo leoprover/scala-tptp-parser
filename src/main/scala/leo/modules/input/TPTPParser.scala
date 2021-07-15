@@ -1280,7 +1280,7 @@ object TPTPParser {
       if (tfx && o(ASSIGNMENT, null) != null) { // Only allow := in TFX mode
         f1 match {
           case TFF.AtomicFormula(f, args) =>
-            val f2 = tffLogicFormulaOrTerm() // Terms are more general, since they can also be formulas in TFX
+            val f2 = tffLogicFormulaOrTerm0() // Terms are more general, since they can also be formulas in TFX
             TFF.Assignment(TFF.AtomicTerm(f, args), f2)
           case _ => error2(s"Parse error: Unexpected left-hand side of assignmeht '${f1.pretty}'. Only atomic terms are permitted.", lastTok)
         }
@@ -1514,7 +1514,7 @@ object TPTPParser {
     }
 
     def tffTerm(tfx: Boolean): TFF.Term = {
-      if (tfx) tffLogicFormulaOrTerm()
+      if (tfx) tffLogicFormulaOrTerm0()
       else tffTerm0(tfx)
     }
 
@@ -1541,9 +1541,9 @@ object TPTPParser {
         case LBRACKET if tfx => // Tuple
           consume()
           if (o(RBRACKET, null) == null) {
-            var entries: Seq[TFF.Term] = Vector(tffTerm(tfx))
+            var entries: Seq[TFF.Term] = Vector(tffLogicFormulaOrTerm())
             while (o(COMMA, null) != null) {
-              entries = entries :+ tffTerm(tfx)
+              entries = entries :+ tffLogicFormulaOrTerm()
             }
             a(RBRACKET)
             TFF.Tuple(entries)
@@ -1558,11 +1558,24 @@ object TPTPParser {
       }
     }
 
+    private[this] def tffLogicFormulaOrTerm(): TFF.Term = {
+      // To allow := bindings with arbitrary formulas or terms (w/o parentheses), i.e., have := a very low binding strength
+      val f1 = tffLogicFormulaOrTerm0()
+      if (o(ASSIGNMENT, null) != null) {
+        f1 match {
+          case at@TFF.AtomicTerm(_, _) =>
+            val f2 = tffLogicFormulaOrTerm0()
+            TFF.FormulaTerm(TFF.Assignment(at, f2))
+          case _ => error2(s"Parse error: Unexpected left-hand side of assignmeht '${f1.pretty}'. Only atomic terms are permitted.", lastTok)
+        }
+      } else f1
+    }
+
     // "complex" TFX terms (formulas or simple terms)
     // I think there is no better solution than to copy the tffLogicFormula0 stuff and generalize to terms; I don't
     // want to introduce more complicated (and possibly slower) constructions on top of the non-TFX case
     // so I need to take the ugly approach: that's life ...
-    private[this] def tffLogicFormulaOrTerm(): TFF.Term = {
+    private[this] def tffLogicFormulaOrTerm0(): TFF.Term = {
       val f1 = tffUnitFormulaOrTerm(acceptEqualityLike = true)
       if (tokens.hasNext) {
         val next = peek()
@@ -1606,7 +1619,7 @@ object TPTPParser {
       val left = tok._1 match {
         case LPAREN =>
           consume()
-          val f = tffLogicFormulaOrTerm()
+          val f = tffLogicFormulaOrTerm0()
           a(RPAREN)
           f
         case c if isUnaryConnective(c) =>
