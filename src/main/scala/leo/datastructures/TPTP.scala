@@ -552,6 +552,10 @@ object TPTP {
       override def pretty: String = s"(${lhs.pretty}) := (${rhs.pretty})"
       override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
     }
+    final case class NonclassicalPolyaryFormula(connective: VararyConnective, args: Seq[Formula]) extends Formula {
+      override def pretty: String = s"${connective.pretty}(${args.map(_.pretty).mkString(",")})"
+      override def symbols: Set[String] = args.flatMap(_.symbols).toSet
+    }
 
     /**
      * Syntactical terms of the TFF language, i.e, first-order terms being one of:
@@ -671,6 +675,18 @@ object TPTP {
       /** Returns a TPTP-compliant serialization of the connective. */
       def pretty: String
     }
+
+    sealed abstract class VararyConnective extends Connective
+    final case class NonclassicalLongOperator(name: String, parameters: Seq[Either[Term, (Term, Term)]]) extends VararyConnective {
+      override def pretty: String = if (parameters.isEmpty) s"{$name}" else s"{$name:${parameters.map(p => p.fold(idx => s"#${idx.pretty}", kv => s"${kv._1.pretty} := ${kv._2.pretty}")).mkString(",")}}"
+    }
+    final case class NonclassicalBox(index: Option[Term]) extends VararyConnective {
+      override def pretty: String = if (index.isEmpty) s"[.]" else s"[#${index.get.pretty}]"
+    }
+    final case class NonclassicalDiamond(index: Option[Term]) extends VararyConnective {
+      override def pretty: String = if (index.isEmpty) s"<.>" else s"<#${index.get.pretty}>"
+    }
+
     sealed abstract class UnaryConnective extends Connective
     /** Negation */
     final case object ~ extends UnaryConnective { override def pretty: String = "~" }

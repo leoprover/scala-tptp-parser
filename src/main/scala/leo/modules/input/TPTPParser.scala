@@ -1068,15 +1068,46 @@ object TPTPParser {
           val rb = o(RBRACKET, null)
           if (rb != null) THF.Tuple(Seq.empty)
           else {
-            val f = thfLogicFormula()
-            var fs: Seq[THF.Formula] = Vector(f)
-            while (o(COMMA, null) != null) {
-              fs = fs :+ thfLogicFormula()
+            val next = peek()
+            next._1 match {
+              case DOT => // Non-classical connective short
+                consume()
+                a(RBRACKET)
+                THF.ConnectiveTerm(THF.NonclassicalBox(None))
+              case HASH => // Non-classical connective shot
+                // HASH is consumed by thfNCLIndex
+                val index = thfNCLIndex()
+                a(RBRACKET)
+                THF.ConnectiveTerm(THF.NonclassicalBox(Some(index)))
+
+              case _ => // Tuple
+                val f = thfLogicFormula()
+                var fs: Seq[THF.Formula] = Vector(f)
+                while (o(COMMA, null) != null) {
+                  fs = fs :+ thfLogicFormula()
+                }
+                a(RBRACKET)
+                THF.Tuple(fs)
             }
-            a(RBRACKET)
-            THF.Tuple(fs)
           }
-        case LBRACES => // Non-classical connective
+
+        case LANGLE =>  // Non-classical connective short
+          consume()
+          val next = peek()
+          next._1 match {
+            case DOT =>
+              consume()
+              a(RANGLE)
+              THF.ConnectiveTerm(THF.NonclassicalDiamond(None))
+            case HASH => // Non-classical connective shot
+              // HASH is consumed by thfNCLIndex
+              val index = thfNCLIndex()
+              a(RANGLE)
+              THF.ConnectiveTerm(THF.NonclassicalDiamond(Some(index)))
+            case _ => error2(s"Unrecognized input '${next._1}' for non-classical diamond conective.", next)
+          }
+
+        case LBRACES => // Non-classical connective LONG
           consume()
           val name: String = a(DOLLARWORD)._2
           var parameters: Seq[Either[THF.Formula, (THF.Formula, THF.Formula)]] = Seq.empty
@@ -1088,6 +1119,7 @@ object TPTPParser {
           }
           a(RBRACES)
           THF.ConnectiveTerm(THF.NonclassicalLongOperator(name, parameters))
+
 
         case _ => error2(s"Unrecognized thf formula input '${tok._1}'", tok)
       }
