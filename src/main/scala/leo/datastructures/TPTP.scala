@@ -374,7 +374,10 @@ object TPTP {
       override def symbols: Set[String] = Set.empty
     }
     final case class ConnectiveTerm(conn: Connective) extends Formula {
-      override def pretty: String = s"(${conn.pretty})"
+      override def pretty: String = conn match {
+        case _: VararyConnective => conn.pretty
+        case _ => s"(${conn.pretty})"
+      }
       override def symbols: Set[String] = Set.empty
     }
     final case class DistinctObject(name: String) extends Formula {
@@ -393,6 +396,18 @@ object TPTP {
       /** Returns a TPTP-compliant serialization of the connective. */
       def pretty: String
     }
+
+    sealed abstract class VararyConnective extends Connective
+    final case class NonclassicalLongOperator(name: String, parameters: Seq[Either[Formula, (Formula, Formula)]]) extends VararyConnective {
+      override def pretty: String = if (parameters.isEmpty) s"{$name}" else s"{$name:${parameters.map(p => p.fold(idx => s"#${idx.pretty}", kv => s"${kv._1.pretty} := ${kv._2.pretty}")).mkString(",")}}"
+    }
+    final case class NonclassicalBox(index: Option[Formula]) extends VararyConnective {
+      override def pretty: String = if (index.isEmpty) s"[.]" else s"[#${index.get.pretty}]"
+    }
+    final case class NonclassicalDiamond(index: Option[Formula]) extends VararyConnective {
+      override def pretty: String = if (index.isEmpty) s"<.>" else s"<#${index.get.pretty}>"
+    }
+
     sealed abstract class UnaryConnective extends Connective
     final case object ~ extends UnaryConnective { override def pretty: String = "~" }
 

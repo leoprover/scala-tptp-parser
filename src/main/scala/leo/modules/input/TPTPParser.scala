@@ -451,7 +451,7 @@ object TPTPParser {
                 throw new TPTPParseException("Unrecognized token '<~'", curLine, curOffset-2)
               }
             } else
-              throw new TPTPParseException("Unrecognized token '<'", curLine, curOffset-1)
+              tok(LANGLE, 1)
           case '=' => // IMPL or EQUALS
             if (iter.hasNext && iter.head == '>') {
               consume()
@@ -544,6 +544,7 @@ object TPTPParser {
             }
           case '{' => tok(LBRACES, 1)
           case '}' => tok(RBRACES, 1)
+          case '#' => tok(HASH, 1)
           case _ => throw new TPTPParseException(s"Unrecognized token '$ch'", curLine, curOffset-1)
         }
       }
@@ -674,7 +675,8 @@ object TPTPParser {
           LPAREN, RPAREN, LBRACKET, RBRACKET, LBRACES, RBRACES,
           COMMA, DOT, COLON,
           RANGLE, STAR, PLUS,
-          SEQUENTARROW = Value
+          SEQUENTARROW,
+          LANGLE, HASH = Value
     }
   }
 
@@ -798,7 +800,7 @@ object TPTPParser {
       else THFAnnotated(n, r, f, Some((source, Option(info))))
     }
 
-    def thfFormula(): THF.Statement = {
+    private[this] def thfFormula(): THF.Statement = {
       val idx = peekUnder(LPAREN)
       val tok = peek(idx)
       tok._1 match {
@@ -1074,6 +1076,18 @@ object TPTPParser {
             a(RBRACKET)
             THF.Tuple(fs)
           }
+        case LBRACES => // Non-classical connective
+          consume()
+          val name: String = a(DOLLARWORD)._2
+          var parameters: Seq[Either[THF.Formula, (THF.Formula, THF.Formula)]] = Seq.empty
+          if (o(COLON, null) != null) {
+            parameters = Vector(thfNCLIndexOrParameter())
+            while (o(COMMA, null) != null) {
+              parameters = parameters :+ thfNCLIndexOrParameter()
+            }
+          }
+          a(RBRACES)
+          THF.ConnectiveTerm(THF.NonclassicalLongOperator(name, parameters))
 
         case _ => error2(s"Unrecognized thf formula input '${tok._1}'", tok)
       }
@@ -1099,6 +1113,30 @@ object TPTPParser {
       a(COLON)
       val typ = thfTopLevelType()
       (variableName, typ)
+    }
+
+    private[this] def thfNCLIndex(): THF.Formula = {
+      a(HASH)
+      val tok = peek()
+      tok._1 match {
+        case LOWERWORD | SINGLEQUOTED | DOLLARWORD | DOLLARDOLLARWORD => THF.FunctionTerm(consume()._2, Seq.empty)
+        case DOUBLEQUOTED => THF.DistinctObject(consume()._2)
+        case INT | RATIONAL | REAL => THF.NumberTerm(number())
+        case UPPERWORD => THF.Variable(consume()._2)
+        case _ => error(Seq(INT, RATIONAL, REAL, DOUBLEQUOTED, UPPERWORD, LOWERWORD, SINGLEQUOTED, DOLLARWORD, DOLLARDOLLARWORD), tok)
+      }
+    }
+    private[this] def thfNCLIndexOrParameter(): Either[THF.Formula, (THF.Formula, THF.Formula)] = {
+      val tok = peek()
+      tok._1 match {
+        case HASH => Left(thfNCLIndex())
+        case DOLLARWORD | DOLLARDOLLARWORD =>
+          val lhs = THF.FunctionTerm(consume()._2, Seq.empty)
+          a(ASSIGNMENT)
+          val rhs = thfLogicFormula0()
+          Right((lhs, rhs))
+        case _ => error2(s"Unexpected token type '${tok._1}' as parameter of non-classical operator: Either indexed constant or key-value parameter expected.", peek())
+      }
     }
 
     ////////////////////////////////////////////////////////////////////////
