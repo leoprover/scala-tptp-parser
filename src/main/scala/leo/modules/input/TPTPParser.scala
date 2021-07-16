@@ -1518,7 +1518,7 @@ object TPTPParser {
             else error2(s"Parse error: Unexpected variable '$variableName' at formula level in non-TFX mode", tok)
           }
 
-        case DOUBLEQUOTED | INT | RATIONAL | REAL | LBRACKET =>
+        case DOUBLEQUOTED | INT | RATIONAL | REAL =>
           feasibleForEq = false
           val left = tffTerm0(tfx)
           // we require an equation directly (not via outer-level)
@@ -1537,6 +1537,108 @@ object TPTPParser {
               case _ => error2(s"Parse error: Unexpected term '${left.pretty}' at formula level", tok)
             }
           } else error2(s"Parse error: Unexpected term '${left.pretty}' at formula level", tok)
+
+        case LBRACKET if tfx =>
+          val next = peek(1)
+          next._1 match {
+            case DOT => // [.]
+              consume() // consume LBRACKET
+              consume() // consume DOT
+              a(RBRACKET)
+              // operator end, arguments begin
+              a(LPAREN)
+              var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
+              while (o(COMMA, null) != null) {
+                args = args :+ tffLogicFormula0(tfx)
+              }
+              a(RPAREN)
+              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalBox(None), args)
+
+            case HASH => // [#...]
+              consume() // consume LBRACKET
+              // do not consume HASH
+              // HASH is consumed by thfNCLIndex
+              val index = tffNCLIndex()
+              a(RBRACKET)
+              // operator end, arguments begin
+              a(LPAREN)
+              var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
+              while (o(COMMA, null) != null) {
+                args = args :+ tffLogicFormula0(tfx)
+              }
+              a(RPAREN)
+              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalBox(Some(index)), args)
+
+            case _ => // Same as DOUBLEQUOTED, INT, RATIONAL, REAL
+              feasibleForEq = false
+              val left = tffTerm0(tfx)
+              // we require an equation directly (not via outer-level)
+              // as otherwise we disallow proper terms
+              if (tokens.hasNext && acceptEqualityLike) {
+                val nextTok = peek()
+                nextTok._1 match {
+                  case EQUALS =>
+                    consume()
+                    val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm(tfx)
+                    TFF.Equality(left, right)
+                  case NOTEQUALS =>
+                    consume()
+                    val right = if (tfx) tffUnitFormulaOrTerm(acceptEqualityLike = false) else tffTerm(tfx)
+                    TFF.Inequality(left, right)
+                  case _ => error2(s"Parse error: Unexpected term '${left.pretty}' at formula level", tok)
+                }
+              } else error2(s"Parse error: Unexpected term '${left.pretty}' at formula level", tok)
+          }
+
+        case LBRACES if tfx => //non-classical long form operator (only in TFX)
+          consume()
+          val name: String = a(DOLLARWORD)._2
+          var parameters: Seq[Either[TFF.Term, (TFF.Term, TFF.Term)]] = Seq.empty
+          if (o(COLON, null) != null) {
+            parameters = Vector(tffNCLIndexOrParameter())
+            while (o(COMMA, null) != null) {
+              parameters = parameters :+ tffNCLIndexOrParameter()
+            }
+          }
+          a(RBRACES)
+          // operator done, arguments now
+          a(LPAREN)
+          var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
+          while (o(COMMA, null) != null) {
+            args = args :+ tffLogicFormula0(tfx)
+          }
+          a(RPAREN)
+          TFF.NonclassicalPolyaryFormula(TFF.NonclassicalLongOperator(name, parameters), args)
+
+        case LANGLE if tfx => // non-classical short form diamond (only in TFX)
+          consume()
+          val next = peek()
+          next._1 match {
+            case DOT =>
+              consume()
+              a(RANGLE)
+              // operator end, arguments begin
+              a(LPAREN)
+              var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
+              while (o(COMMA, null) != null) {
+                args = args :+ tffLogicFormula0(tfx)
+              }
+              a(RPAREN)
+              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalDiamond(None), args)
+            case HASH => // Non-classical connective shot
+              // HASH is consumed by thfNCLIndex
+              val index = tffNCLIndex()
+              a(RANGLE)
+              // operator end, arguments begin
+              a(LPAREN)
+              var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
+              while (o(COMMA, null) != null) {
+                args = args :+ tffLogicFormula0(tfx)
+              }
+              a(RPAREN)
+              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalDiamond(Some(index)), args)
+            case _ => error2(s"Unrecognized input '${next._1}' for non-classical diamond conective.", next)
+          }
 
         case _ => error2(s"Unrecognized tff formula input '${tok._1}'", tok)
       }
@@ -1792,6 +1894,30 @@ object TPTPParser {
           case _ => left
         }
       } else left
+    }
+
+    private[this] def tffNCLIndex(): TFF.Term = {
+      a(HASH)
+      val tok = peek()
+      tok._1 match {
+        case LOWERWORD | SINGLEQUOTED | DOLLARWORD | DOLLARDOLLARWORD => TFF.AtomicTerm(consume()._2, Seq.empty)
+        case DOUBLEQUOTED => TFF.DistinctObject(consume()._2)
+        case INT | RATIONAL | REAL => TFF.NumberTerm(number())
+        case UPPERWORD => TFF.Variable(consume()._2)
+        case _ => error(Seq(INT, RATIONAL, REAL, DOUBLEQUOTED, UPPERWORD, LOWERWORD, SINGLEQUOTED, DOLLARWORD, DOLLARDOLLARWORD), tok)
+      }
+    }
+    private[this] def tffNCLIndexOrParameter(): Either[TFF.Term, (TFF.Term, TFF.Term)] = {
+      val tok = peek()
+      tok._1 match {
+        case HASH => Left(tffNCLIndex())
+        case DOLLARWORD | DOLLARDOLLARWORD =>
+          val lhs = TFF.AtomicTerm(consume()._2, Seq.empty)
+          a(ASSIGNMENT)
+          val rhs = tffTerm(tfx = true)
+          Right((lhs, rhs))
+        case _ => error2(s"Unexpected token type '${tok._1}' as parameter of non-classical operator: Either indexed constant or key-value parameter expected.", peek())
+      }
     }
 
     ////////////////////////////////////////////////////////////////////////
