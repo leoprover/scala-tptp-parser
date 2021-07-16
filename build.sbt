@@ -37,5 +37,10 @@ lazy val tptpParser = (project in file("."))
     licenses += "MIT" -> url("https://opensource.org/licenses/MIT"),
     sonatypeCredentialHost := "s01.oss.sonatype.org",
 
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.9" % "test"
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.9" % "test",
+
+    Compile / doc / scalacOptions ++= Seq(
+      "-doc-title", "Scala TPTP parser",
+      "-doc-root-content", (Compile / resourceDirectory).value + "/rootdoc.txt"
+    )
   )
