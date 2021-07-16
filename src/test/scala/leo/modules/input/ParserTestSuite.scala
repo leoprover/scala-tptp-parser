@@ -16,6 +16,8 @@ import TPTPParser.TPTPParseException
  * @note Updated January 2021 -- cover more files.
  */
 class ParserTestSuite extends AnyFunSuite {
+  import ParserTestSuite.time
+
   private val source = getClass.getResource("/").getPath
 
   private val problems = Seq(
@@ -58,11 +60,13 @@ class ParserTestSuite extends AnyFunSuite {
       }
     }
   }
+}
+object ParserTestSuite {
 
   /** Measures the time it takes to calculate the argument.
    * Returns a tuple (t, res) where `t` is the time that was needed to calculate result `res`.
    */
-  protected def time[A](a: => A): (Long, A) = {
+  protected[input] def time[A](a: => A): (Long, A) = {
     val now = System.nanoTime
     val result = a
     ((System.nanoTime - now) / 1000, result)
