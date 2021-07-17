@@ -44,6 +44,10 @@ libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.3"
 ### Non-sbt-projects
 In order to use the library with a non-sbt project, you can simply compile the library and use the class files as an unmanaged dependency/class path. The latest release JAR can also be downloaded from the Maven Central link above.
 
+## API
+
+See the brief [API documentation](https://www.alexandersteen.de/software/scala-tptp-parser/api/).
+
 ## Usage
 The parser object `TPTPParser` offers several methods for parsing TPTP problems, annotated formulas or simple formulas. The input is transformed into an
 abstract syntax tree (AST) provided at `leo.datastructures.TPTP`. The ASTs are mostly case classes that can be further processed by pattern matching.
