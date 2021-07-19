@@ -361,6 +361,7 @@ object TPTP {
       override def pretty: String = s"(${quantifier.pretty} [${variableList.map{case (n,t) => s"$n:${t.pretty}"}.mkString(",")}]: (${body.pretty}))"
       override def symbols: Set[String] = body.symbols
     }
+    /** A TPTP variable. Precondition for creating a Variable object: `name` is uppercase. */
     final case class Variable(name: String) extends Formula {
       override def pretty: String = name
       override def symbols: Set[String] = Set.empty
@@ -635,7 +636,7 @@ object TPTP {
     /**
      * A term that represents an uppercase variable that is bound by some quantifier.
      *
-     * @param name The uppercase name of the variable.
+     * @param name The name of the variable (needs to be uppercase).
      * @note In the context of TFX, this may also be a Boolean-typed variable (i.e., representing a formula).
      *       If TFX is not to be supported, it can be assumed that this only represents proper term variables.
      * @note In the context of TF1, this may also be a type variable (i.e., representing a type).
@@ -891,6 +892,7 @@ object TPTP {
       @inline def isSystemFunction: Boolean = f.startsWith("$$")
       @inline def isConstant: Boolean = args.isEmpty
     }
+    /** A TPTP variable. Precondition for creating a Variable object: `name` is uppercase. */
     final case class Variable(name: String) extends Term {
       override def pretty: String = name
       override def symbols: Set[String] = Set.empty
@@ -1011,6 +1013,7 @@ object TPTP {
       @inline def isSystemFunction: Boolean = f.startsWith("$$")
       @inline def isConstant: Boolean = args.isEmpty
     }
+    /** A TPTP variable. Precondition for creating a Variable object: `name` is uppercase. */
     final case class Variable(name: String) extends Term {
       override def pretty: String = name
       override def symbols: Set[String] = Set.empty
