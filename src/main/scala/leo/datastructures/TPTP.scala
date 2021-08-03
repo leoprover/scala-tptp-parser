@@ -421,7 +421,10 @@ object TPTP {
     final case object <~> extends BinaryConnective { override def pretty: String = "<~>" }
     final case object ~| extends BinaryConnective { override def pretty: String = "~|" }
     final case object ~& extends BinaryConnective { override def pretty: String = "~&" }
+    /** Assignment */
     final case object := extends BinaryConnective { override def pretty: String = ":=" }
+    /** Meta-level identitity */
+    final case object == extends BinaryConnective { override def pretty: String = "==" }
     // assoc
     final case object | extends BinaryConnective { override def pretty: String = "|" }
     final case object & extends BinaryConnective { override def pretty: String = "&" }
@@ -550,6 +553,10 @@ object TPTP {
     }
     final case class Assignment(lhs: AtomicTerm, rhs: Term) extends Formula {
       override def pretty: String = s"(${lhs.pretty}) := (${rhs.pretty})"
+      override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
+    }
+    final case class MetaIdentity(lhs: AtomicTerm, rhs: Term) extends Formula {
+      override def pretty: String = s"(${lhs.pretty}) == (${rhs.pretty})"
       override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
     }
     final case class NonclassicalPolyaryFormula(connective: VararyConnective, args: Seq[Formula]) extends Formula {

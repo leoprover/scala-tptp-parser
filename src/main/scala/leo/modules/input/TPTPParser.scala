@@ -456,6 +456,9 @@ object TPTPParser {
             if (iter.hasNext && iter.head == '>') {
               consume()
               tok(IMPL, 2)
+            } else if (iter.hasNext && iter.head == '=') {
+              consume()
+              tok(IDENTITY, 2)
             } else
               tok(EQUALS, 1)
           case '~' => // NOT, NAND, or NOR
@@ -676,7 +679,7 @@ object TPTPParser {
           COMMA, DOT, COLON,
           RANGLE, STAR, PLUS,
           SEQUENTARROW,
-          LANGLE, HASH = Value
+          LANGLE, HASH, IDENTITY = Value
     }
   }
 
@@ -827,9 +830,9 @@ object TPTPParser {
 
     def thfLogicFormula(): THF.Formula = {
       val f1 = thfLogicFormula0()
-      if (o(ASSIGNMENT, null) != null) {
+      if (o(IDENTITY, null) != null) {
         val f2 = thfLogicFormula0()
-        THF.BinaryFormula(THF.:=, f1, f2)
+        THF.BinaryFormula(THF.==, f1, f2)
       } else f1
     }
 
@@ -1347,11 +1350,11 @@ object TPTPParser {
     def tffLogicFormula(tfx: Boolean): TFF.Formula = {
       // To allow := bindings with arbitrary formulas (w/o parentheses), i.e., have := a very low binding strength
       val f1 = tffLogicFormula0(tfx)
-      if (tfx && o(ASSIGNMENT, null) != null) { // Only allow := in TFX mode
+      if (tfx && o(IDENTITY, null) != null) { // Only allow '==' in TFX mode
         f1 match {
           case TFF.AtomicFormula(f, args) =>
             val f2 = tffLogicFormulaOrTerm0() // Terms are more general, since they can also be formulas in TFX
-            TFF.Assignment(TFF.AtomicTerm(f, args), f2)
+            TFF.MetaIdentity(TFF.AtomicTerm(f, args), f2)
           case _ => error2(s"Parse error: Unexpected left-hand side of assignmeht '${f1.pretty}'. Only atomic terms are permitted.", lastTok)
         }
       } else f1
@@ -1731,13 +1734,13 @@ object TPTPParser {
     }
 
     private[this] def tffLogicFormulaOrTerm(): TFF.Term = {
-      // To allow := bindings with arbitrary formulas or terms (w/o parentheses), i.e., have := a very low binding strength
+      // To allow '==' bindings with arbitrary formulas or terms (w/o parentheses), i.e., have '==' a very low binding strength
       val f1 = tffLogicFormulaOrTerm0()
-      if (o(ASSIGNMENT, null) != null) {
+      if (o(IDENTITY, null) != null) {
         f1 match {
           case at@TFF.AtomicTerm(_, _) =>
             val f2 = tffLogicFormulaOrTerm0()
-            TFF.FormulaTerm(TFF.Assignment(at, f2))
+            TFF.FormulaTerm(TFF.MetaIdentity(at, f2))
           case _ => error2(s"Parse error: Unexpected left-hand side of assignmeht '${f1.pretty}'. Only atomic terms are permitted.", lastTok)
         }
       } else f1
