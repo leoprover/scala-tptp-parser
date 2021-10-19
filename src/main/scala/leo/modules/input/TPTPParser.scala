@@ -1114,11 +1114,12 @@ object TPTPParser {
           consume()
           val name: String = a(DOLLARWORD)._2
           var parameters: Seq[Either[THF.Formula, (THF.Formula, THF.Formula)]] = Seq.empty
-          if (o(COLON, null) != null) {
+          if (o(LPAREN, null) != null) {
             parameters = Vector(thfNCLIndexOrParameter())
             while (o(COMMA, null) != null) {
               parameters = parameters :+ thfNCLIndexOrParameter()
             }
+            a(RPAREN)
           }
           a(RBRACES)
           THF.ConnectiveTerm(THF.NonclassicalLongOperator(name, parameters))
@@ -1597,11 +1598,12 @@ object TPTPParser {
           consume()
           val name: String = a(DOLLARWORD)._2
           var parameters: Seq[Either[TFF.Term, (TFF.Term, TFF.Term)]] = Seq.empty
-          if (o(COLON, null) != null) {
+          if (o(LPAREN, null) != null) {
             parameters = Vector(tffNCLIndexOrParameter())
             while (o(COMMA, null) != null) {
               parameters = parameters :+ tffNCLIndexOrParameter()
             }
+            a(RPAREN)
           }
           a(RBRACES)
           // operator done, arguments now
