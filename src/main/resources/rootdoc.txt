@@ -1,0 +1,61 @@
+This is the documentation for the Scala TPTP parser used, e.g., by the [[https://github.com/leoprover/Leo-III Leo-III prover]].
+
+== Package structure ==
+
+The [[leo]] package contains two sub-packages as follows:
+
+  - [[leo.datastructures `leo.datastructures`]] contains the [[leo.datastructures.TPTP]] object
+    that bundles the different abstract syntax tree (AST) representations for the different TPTP
+    language dialects, including ...
+    - [[leo.datastructures.TPTP.THF `leo.datastructures.TPTP.THF`]] - Higher-order formulas (THF)
+    - [[leo.datastructures.TPTP.TFF `leo.datastructures.TPTP.TFF`]] - Typed first-order formulas (TFF)
+    - [[leo.datastructures.TPTP.FOF `leo.datastructures.TPTP.FOF`]] - Untyped first-order formulas (FOF)
+    - [[leo.datastructures.TPTP.TCF `leo.datastructures.TPTP.TCF`]] - Typed clausal form (TCF)
+    - [[leo.datastructures.TPTP.CNF `leo.datastructures.TPTP.CNF`]] - Untyped clausal form (CNF)
+  - [[leo.modules.input  `leo.modules.input` ]] - the parser itself.
+
+== Usage (in short) ==
+
+The [[leo.modules.input.TPTPParser]] offers several parsing methods:
+  - [[leo.modules.input.TPTPParser.problem]] - for a whole TPTP problem
+  - [[leo.modules.input.TPTPParser.annotated]] - for an annotated TPTP formula (specialized methods
+    for the individual dialects exist).
+  - [[leo.modules.input.TPTPParser.thf]] - for a plain THF formula (without annotations)
+  - [[leo.modules.input.TPTPParser.tff]] - for a plain TFF formula (without annotations)
+  - ... etc.
+
+== Exemplary use case ==
+
+{{{
+  import leo.modules.input.{TPTPParser => Parser}
+  import TPTPParser.TPTPParseException
+  import leo.datastructures.TPTP.THF
+
+  try {
+   val result = Parser.problem(io.Source.fromFile("/path/to/file"))
+   println(s"Parsed ${result.formulas.size} formulae and ${result.includes.size} include statements.")
+   // ...
+   val annotatedFormula = Parser.annotatedTHF("thf(f, axiom, ![X:$i]: (p @ X)).")
+   println(s"${annotatedFormula.name} is an ${annotatedFormula.role}.")
+   // ...
+   val formula = Parser.thf("![X:$i]: (p @ X)")
+   formula match {
+     case THF.FunctionTerm(f, args) => // ...
+     case THF.QuantifiedFormula(quantifier, variableList, body) => // ...
+     case THF.Variable(name) => // ...
+     case THF.UnaryFormula(connective, body) => // ...
+     case THF.BinaryFormula(connective, left, right) => // ...
+     case THF.Tuple(elements) => // ...
+     case THF.ConditionalTerm(condition, thn, els) => // ...
+     case THF.LetTerm(typing, binding, body) => // ...
+     case THF.DefinedTH1ConstantTerm(constant) => // ...
+     case THF.ConnectiveTerm(conn) => // ...
+     case THF.DistinctObject(name) => // ...
+     case THF.NumberTerm(value) => // ...
+   }
+   // ...
+  } catch {
+   case e: TPTPParseException => println(s"Parse error at line ${e.line}:${e.offset}: ${e.getMessage}")
+  }
+}}}
+
