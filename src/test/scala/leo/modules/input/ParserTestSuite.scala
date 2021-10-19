@@ -18,7 +18,7 @@ import TPTPParser.TPTPParseException
 class ParserTestSuite extends AnyFunSuite {
   import ParserTestSuite.time
 
-  private val source = getClass.getResource("/").getPath
+  private val source = getClass.getResource("/SYN000").getPath
 
   private val problems = Seq(
     "SYN000-1.p" -> "TPTP CNF basic syntax features",
