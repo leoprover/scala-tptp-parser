@@ -398,7 +398,10 @@ object TPTP {
     }
     /** Connective as proper term. */
     final case class ConnectiveTerm(conn: Connective) extends Formula {
-      override def pretty: String = s"(${conn.pretty})"
+      override def pretty: String = conn match {
+        case _: VararyConnective => conn.pretty
+        case _ => s"(${conn.pretty})"
+      }
       override def symbols: Set[String] = Set.empty
     }
     /** An object that is unequal to every DistinctObject with a different name.  */
@@ -418,6 +421,18 @@ object TPTP {
       /** Returns a TPTP-compliant serialization of the connective. */
       def pretty: String
     }
+
+    sealed abstract class VararyConnective extends Connective
+    final case class NonclassicalLongOperator(name: String, parameters: Seq[Either[Formula, (Formula, Formula)]]) extends VararyConnective {
+      override def pretty: String = if (parameters.isEmpty) s"{$name}" else s"{$name:${parameters.map(p => p.fold(idx => s"#${idx.pretty}", kv => s"${kv._1.pretty} := ${kv._2.pretty}")).mkString(",")}}"
+    }
+    final case class NonclassicalBox(index: Option[Formula]) extends VararyConnective {
+      override def pretty: String = if (index.isEmpty) s"[.]" else s"[#${index.get.pretty}]"
+    }
+    final case class NonclassicalDiamond(index: Option[Formula]) extends VararyConnective {
+      override def pretty: String = if (index.isEmpty) s"<.>" else s"<#${index.get.pretty}>"
+    }
+
     sealed abstract class UnaryConnective extends Connective
     /** Negation connective */
     final case object ~ extends UnaryConnective { override def pretty: String = "~" }
@@ -440,8 +455,10 @@ object TPTP {
     final case object ~| extends BinaryConnective { override def pretty: String = "~|" }
     /** Nand connective */
     final case object ~& extends BinaryConnective { override def pretty: String = "~&" }
-    /** Assignment connective (experimental) */
+    /** Assignment */
     final case object := extends BinaryConnective { override def pretty: String = ":=" }
+    /** Meta-level identitity */
+    final case object == extends BinaryConnective { override def pretty: String = "==" }
     // assoc
     /** Disjunction connective */
     final case object | extends BinaryConnective { override def pretty: String = "|" }
@@ -591,6 +608,14 @@ object TPTP {
       override def pretty: String = s"(${lhs.pretty}) := (${rhs.pretty})"
       override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
     }
+    final case class MetaIdentity(lhs: AtomicTerm, rhs: Term) extends Formula {
+      override def pretty: String = s"(${lhs.pretty}) == (${rhs.pretty})"
+      override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
+    }
+    final case class NonclassicalPolyaryFormula(connective: VararyConnective, args: Seq[Formula]) extends Formula {
+      override def pretty: String = s"${connective.pretty}(${args.map(_.pretty).mkString(",")})"
+      override def symbols: Set[String] = args.flatMap(_.symbols).toSet
+    }
 
     /**
      * Syntactical terms of the TFF language, i.e, first-order terms being one of:
@@ -710,6 +735,18 @@ object TPTP {
       /** Returns a TPTP-compliant serialization of the connective. */
       def pretty: String
     }
+
+    sealed abstract class VararyConnective extends Connective
+    final case class NonclassicalLongOperator(name: String, parameters: Seq[Either[Term, (Term, Term)]]) extends VararyConnective {
+      override def pretty: String = if (parameters.isEmpty) s"{$name}" else s"{$name:${parameters.map(p => p.fold(idx => s"#${idx.pretty}", kv => s"${kv._1.pretty} := ${kv._2.pretty}")).mkString(",")}}"
+    }
+    final case class NonclassicalBox(index: Option[Term]) extends VararyConnective {
+      override def pretty: String = if (index.isEmpty) s"[.]" else s"[#${index.get.pretty}]"
+    }
+    final case class NonclassicalDiamond(index: Option[Term]) extends VararyConnective {
+      override def pretty: String = if (index.isEmpty) s"<.>" else s"<#${index.get.pretty}>"
+    }
+
     sealed abstract class UnaryConnective extends Connective
     /** Negation */
     final case object ~ extends UnaryConnective { override def pretty: String = "~" }
