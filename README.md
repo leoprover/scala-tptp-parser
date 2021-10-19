@@ -14,13 +14,15 @@ The package contains a data structure for the abstract syntax tree (AST) of the 
 
 The parser is based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html).
 
+**New since v1.4:** `scala-tptp-parser` also supports parsing the new TPTP format for non-classical logics (see http://tptp.org/NonClassicalLogic/)
+
 `scala-tptp-parser` may be referenced using [![DOI](https://zenodo.org/badge/328686203.svg)](https://zenodo.org/badge/latestdoi/328686203)
 
 
 ## Install
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.leoprover/scala-tptp-parser_2.13.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.leoprover%22%20AND%20a:%22scala-tptp-parser_2.13%22)
 
-The Scala TPTP parser is available on [Maven Central](https://search.maven.org/artifact/io.github.leoprover/scala-tptp-parser_2.13) (current version: 1.3).
+The Scala TPTP parser is available on [Maven Central](https://search.maven.org/artifact/io.github.leoprover/scala-tptp-parser_2.13) (current version: 1.4).
 Snapshots are available on [Sonatype](https://s01.oss.sonatype.org/content/repositories/snapshots/io/github/leoprover/scala-tptp-parser_2.13/).
 
 ### Maven
@@ -38,7 +40,7 @@ In order to include `scala-tptp-parser` into your project via Maven, just add th
 
 In order to include `scala-tptp-parser` into your project via SBT, just add the following dependency to your `build.sbt`:
 ```scala
-libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.3"
+libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.4"
 ```
 
 ### Non-sbt-projects
