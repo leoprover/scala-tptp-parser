@@ -3,6 +3,8 @@
 package leo
 package datastructures
 
+import leo.datastructures.TPTP.Comment.{CommentAssociatedType, CommentAssociation}
+
 /**
  * Collection of TPTP-related data types that are returned by the [[leo.modules.input.TPTPParser]].
  * An overview:
@@ -38,23 +40,77 @@ object TPTP {
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
 
-  final case class Problem(includes: Seq[Include], formulas: Seq[AnnotatedFormula]) {
+  final case class Problem(includes: Seq[Include], formulas: Seq[AnnotatedFormula], comments: Map[CommentAssociation, Seq[Comment]]) {
     /** A TPTP-compliant serialization of the problem representation. */
     def pretty: String = {
       val sb: StringBuilder = new StringBuilder()
-      includes.foreach { case (filename, inc) =>
+      includes.zipWithIndex.foreach { case ((filename, inc), index) =>
+        comments(CommentAssociatedType.INCLUDE, index).foreach(comment => sb.append(comment.pretty))
         if (inc.isEmpty) {
           sb.append(s"include('$filename').\n")
         } else {
           sb.append(s"include('$filename', [${inc.map(s => s"'$s'").mkString(",")}]).\n")
         }
       }
-      formulas.foreach { f =>
+      formulas.zipWithIndex.foreach { case (f, index) =>
+        comments(CommentAssociatedType.FORMULA, index).foreach(comment => sb.append(comment.pretty))
         sb.append(f.pretty)
         sb.append("\n")
       }
       if (sb.nonEmpty) sb.init.toString()
       else sb.toString()
+    }
+  }
+
+  import leo.datastructures.TPTP.Comment.CommentFormat.CommentFormat
+  import leo.datastructures.TPTP.Comment.CommentType.CommentType
+  final case class Comment(var format: CommentFormat, var commentType: CommentType, var content: String) {
+    import leo.datastructures.TPTP.Comment.CommentFormat
+    import leo.datastructures.TPTP.Comment.CommentType
+    def pretty: String = {
+      val dollars = commentType match {
+        case CommentType.NORMAL => ""
+        case CommentType.DEFINED => "$"
+        case CommentType.SYSTEM => "$$"
+      }
+      format match {
+        case CommentFormat.BLOCK => s"/*$dollars$content*/\n"
+        case CommentFormat.LINE => s"%$dollars$content\n"
+      }
+    }
+  }
+  object Comment {
+    import leo.datastructures.TPTP.Comment.CommentAssociatedType.CommentAssociatedType
+
+    type AssociationIndex = Int
+    type CommentAssociation = (CommentAssociatedType, AssociationIndex)
+
+    /** An enumeration for the different comment formats:
+     *  - [[CommentFormat.BLOCK]]
+     *  - [[CommentFormat.LINE]]
+     */
+    final object CommentFormat extends Enumeration {
+      type CommentFormat = Value
+      final val BLOCK, LINE = Value
+    }
+
+    /** An enumeration for the different comment formats:
+     *  - [[CommentType.NORMAL]]
+     *  - [[CommentType.DEFINED]]
+     *  - [[CommentType.SYSTEM]]
+     */
+    final object CommentType extends Enumeration {
+      type CommentType = Value
+      final val NORMAL, DEFINED, SYSTEM = Value
+    }
+
+    /** An enumeration for the different comment formats:
+     *  - [[CommentAssociatedType.INCLUDE]]
+     *  - [[CommentAssociatedType.FORMULA]]
+     */
+    final object CommentAssociatedType extends Enumeration {
+      type CommentAssociatedType = Value
+      final val INCLUDE, FORMULA = Value
     }
   }
 
