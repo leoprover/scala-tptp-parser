@@ -30,7 +30,7 @@ import leo.datastructures.TPTP.Comment.{CommentAssociatedType, CommentAssociatio
 object TPTP {
   /** Representation of TPTP include directives, where the first element in the file to be includes and the
    * second element in a list of identifiers to be imported (empty if everything is imported). */
-  type Include = (String, Seq[String])
+  type Include = (String, Seq[String], Seq[Comment])
   /** Optional annotation at the end of an [[TPTP.AnnotatedFormula]]. */
   type Annotations = Option[(GeneralTerm, Option[Seq[GeneralTerm]])]
 
@@ -40,20 +40,20 @@ object TPTP {
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
 
-  final case class Problem(includes: Seq[Include], formulas: Seq[AnnotatedFormula], comments: Map[CommentAssociation, Seq[Comment]]) {
+  final case class Problem(includes: Seq[Include], formulas: Seq[AnnotatedFormula]) {
     /** A TPTP-compliant serialization of the problem representation. */
     def pretty: String = {
       val sb: StringBuilder = new StringBuilder()
-      includes.zipWithIndex.foreach { case ((filename, inc), index) =>
-        comments(CommentAssociatedType.INCLUDE, index).foreach(comment => sb.append(comment.pretty))
+      includes.foreach { case (filename, inc, comments) =>
+        comments.foreach { c => sb.append(c.pretty) }
         if (inc.isEmpty) {
           sb.append(s"include('$filename').\n")
         } else {
           sb.append(s"include('$filename', [${inc.map(s => s"'$s'").mkString(",")}]).\n")
         }
       }
-      formulas.zipWithIndex.foreach { case (f, index) =>
-        comments(CommentAssociatedType.FORMULA, index).foreach(comment => sb.append(comment.pretty))
+      formulas.foreach { case f =>
+        f.comments.foreach { c => sb.append(c.pretty) }
         sb.append(f.pretty)
         sb.append("\n")
       }
@@ -64,7 +64,7 @@ object TPTP {
 
   import leo.datastructures.TPTP.Comment.CommentFormat.CommentFormat
   import leo.datastructures.TPTP.Comment.CommentType.CommentType
-  final case class Comment(var format: CommentFormat, var commentType: CommentType, var content: String) {
+  final case class Comment(format: CommentFormat, commentType: CommentType, content: String) {
     import leo.datastructures.TPTP.Comment.CommentFormat
     import leo.datastructures.TPTP.Comment.CommentType
     def pretty: String = {
@@ -134,6 +134,8 @@ object TPTP {
     def formula: F
     /** The annotations of the annotated formula, if any. */
     def annotations: Annotations
+    /** The comments associated with this annotated formula, which are the comments right before/over the formula. */
+    var comments: Seq[Comment] = Vector.empty
 
     /** The [[AnnotatedFormula.FormulaType]] of the underlying formula. */
     def formulaType: FormulaType

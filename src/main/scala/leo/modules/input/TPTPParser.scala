@@ -761,11 +761,10 @@ object TPTPParser {
     def tptpFile(): Problem = {
       if (!tokens.hasNext) {
         // OK, empty file is fine
-        Problem(Vector.empty, Vector.empty, Map.empty)
+        Problem(Vector.empty, Vector.empty)
       } else {
         var formulas: Seq[AnnotatedFormula] = Vector.empty
-        var includes: Seq[(String, Seq[String])] = Vector.empty
-        var comments: Map[CommentAssociation, Seq[Comment]] = Map.empty
+        var includes: Seq[(String, Seq[String], Seq[Comment])] = Vector.empty
         var current_comments: Seq[Comment] = Vector.empty
         while (tokens.hasNext) {
           val t = peek()
@@ -773,13 +772,14 @@ object TPTPParser {
             case LOWERWORD =>
               t._2 match {
                 case "include" =>
-                  comments += ((CommentAssociatedType.INCLUDE, includes.length) -> current_comments)
+                  val (file, idents) = include()
+                  includes = includes :+ (file, idents, current_comments)
                   current_comments = Vector.empty
-                  includes = includes :+ include()
                 case "thf" | "tff" | "fof" | "tcf" | "cnf" | "tpi" =>
-                  comments += ((CommentAssociatedType.FORMULA, formulas.length) -> current_comments)
+                  val formula = annotatedFormula()
+                  formula.comments = current_comments
+                  formulas = formulas :+ formula
                   current_comments = Vector.empty
-                  formulas = formulas :+ annotatedFormula()
                 case _ => error1(Seq("thf", "tff", "fof", "tcf", "cnf", "tpi", "include"), t)
               }
             case COMMENT_BLOCK | COMMENT_LINE | DEFINED_COMMENT_BLOCK | DEFINED_COMMENT_LINE | SYSTEM_COMMENT_BLOCK | SYSTEM_COMMENT_LINE =>
@@ -787,7 +787,7 @@ object TPTPParser {
             case _ => error1(Seq("thf", "tff", "fof", "tcf", "cnf", "tpi", "include"), t)
           }
         }
-        Problem(includes, formulas, comments)
+        Problem(includes, formulas)
       }
     }
 
