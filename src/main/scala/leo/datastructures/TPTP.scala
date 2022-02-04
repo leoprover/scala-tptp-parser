@@ -39,7 +39,16 @@ object TPTP {
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
 
-  final case class Problem(includes: Seq[Include], formulas: Seq[AnnotatedFormula]) {
+  /** The representation of whole TPTP problems, consisting of:
+   *  - include statements (imports of axiom files etc.),
+   *  - annotated formulas (axioms, conjectures, type declarations, etc.), and
+   *  - comments associated to annotated formulas.
+   *
+   *  @param includes The list of include statements
+   *  @param formulas The list of annotated formulas
+   *  @param formulaComments The comments associated with this annotated formula, which are the comments right before/over the formula.
+   */
+  final case class Problem(includes: Seq[Include], formulas: Seq[AnnotatedFormula], formulaComments: Map[String, Seq[Comment]]) {
     /** A TPTP-compliant serialization of the problem representation. */
     def pretty: String = {
       val sb: StringBuilder = new StringBuilder()
@@ -52,7 +61,10 @@ object TPTP {
         }
       }
       formulas.foreach { f =>
-        f.comments.foreach { c => sb.append(c.pretty) }
+        formulaComments.get(f.name) match {
+          case Some(comments) => comments.foreach { c => sb.append(c.pretty) }
+          case None => // Nothing
+        }
         sb.append(f.pretty)
         sb.append("\n")
       }
@@ -61,9 +73,7 @@ object TPTP {
     }
   }
 
-  import leo.datastructures.TPTP.Comment.CommentFormat.CommentFormat
-  import leo.datastructures.TPTP.Comment.CommentType.CommentType
-  final case class Comment(format: CommentFormat, commentType: CommentType, content: String) {
+  final case class Comment(format: Comment.CommentFormat.CommentFormat, commentType: Comment.CommentType.CommentType, content: String) {
     import leo.datastructures.TPTP.Comment.CommentFormat
     import leo.datastructures.TPTP.Comment.CommentType
     def pretty: String = {
@@ -73,17 +83,12 @@ object TPTP {
         case CommentType.SYSTEM => "$$"
       }
       format match {
-        case CommentFormat.BLOCK => s"/*$dollars$content*/\n"
+        case CommentFormat.BLOCK => s"/*$dollars$content*/"
         case CommentFormat.LINE => s"%$dollars$content\n"
       }
     }
   }
   object Comment {
-    import leo.datastructures.TPTP.Comment.CommentAssociatedType.CommentAssociatedType
-
-    type AssociationIndex = Int
-    type CommentAssociation = (CommentAssociatedType, AssociationIndex)
-
     /** An enumeration for the different comment formats:
      *  - [[CommentFormat.BLOCK]]
      *  - [[CommentFormat.LINE]]
@@ -101,15 +106,6 @@ object TPTP {
     final object CommentType extends Enumeration {
       type CommentType = Value
       final val NORMAL, DEFINED, SYSTEM = Value
-    }
-
-    /** An enumeration for the different comment formats:
-     *  - [[CommentAssociatedType.INCLUDE]]
-     *  - [[CommentAssociatedType.FORMULA]]
-     */
-    final object CommentAssociatedType extends Enumeration {
-      type CommentAssociatedType = Value
-      final val INCLUDE, FORMULA = Value
     }
   }
 
@@ -133,9 +129,6 @@ object TPTP {
     def formula: F
     /** The annotations of the annotated formula, if any. */
     def annotations: Annotations
-    /** The comments associated with this annotated formula, which are the comments right before/over the formula. */
-    var comments: Seq[Comment] = Vector.empty
-
     /** The [[AnnotatedFormula.FormulaType]] of the underlying formula. */
     def formulaType: FormulaType
 
