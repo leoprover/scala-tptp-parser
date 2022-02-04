@@ -14,7 +14,7 @@ package datastructures
  *     - Annotated TCF formulas by [[leo.datastructures.TPTP.TCFAnnotated]],
  *     - Annotated CNF formulas by [[leo.datastructures.TPTP.CNFAnnotated]], and
  *     - Annotated TPI formulas by [[leo.datastructures.TPTP.TPIAnnotated]]
- *   - Include directives are represented by tuples `(filename,optional-list-of-ids)` of type [[leo.datastructures.TPTP.Include]].
+ *   - Include directives are represented by tuples `(filename,(optional-list-of-ids,comments))` of type [[leo.datastructures.TPTP.Include]].
  *
  * See [[TPTP.THF]], [[TPTP.TFF]], [[TPTP.FOF]], [[TPTP.TCF]], [[TPTP.CNF]] for more information on the
  * representation of "plain" THF, TFF, FOF, TCF and CNF formulas, respectively.
@@ -27,9 +27,9 @@ package datastructures
  */
 object TPTP {
   /** Representation of TPTP include directives, where the first element in the file to be includes, the
-   * second element in a list of identifiers to be imported (empty if everything is imported),
-   * the third element is a (possibly empty) list of comments associated to the import. */
-  type Include = (String, Seq[String], Seq[Comment])
+   * second element in a tuple of additional information: A list of identifiers to be imported (empty if everything is imported),
+   * and a (possibly empty) list of comments associated to the import. */
+  type Include = (String, (Seq[String], Seq[Comment]))
   /** Optional annotation at the end of an [[TPTP.AnnotatedFormula]]. */
   type Annotations = Option[(GeneralTerm, Option[Seq[GeneralTerm]])]
 
@@ -48,12 +48,14 @@ object TPTP {
    *  @param formulas The list of annotated formulas
    *  @param formulaComments The comments associated with this annotated formula, which are the comments right before/over the formula.
    */
-  final case class Problem(includes: Seq[Include], formulas: Seq[AnnotatedFormula], formulaComments: Map[String, Seq[Comment]]) {
+  final case class Problem(includes: Seq[Include],
+                           formulas: Seq[AnnotatedFormula],
+                           formulaComments: Map[String, Seq[Comment]]) {
     /** A TPTP-compliant serialization of the problem representation. */
     def pretty: String = {
       val sb: StringBuilder = new StringBuilder()
-      includes.foreach { case (filename, inc, comments) =>
-        comments.foreach { c => sb.append(c.pretty) }
+      includes.foreach { case (filename, (inc, comments)) =>
+        comments.foreach { c => sb.append(c.pretty); sb.append("\n") }
         if (inc.isEmpty) {
           sb.append(s"include('$filename').\n")
         } else {
@@ -62,7 +64,7 @@ object TPTP {
       }
       formulas.foreach { f =>
         formulaComments.get(f.name) match {
-          case Some(comments) => comments.foreach { c => sb.append(c.pretty) }
+          case Some(comments) => comments.foreach { c => sb.append(c.pretty); sb.append("\n") }
           case None => // Nothing
         }
         sb.append(f.pretty)
@@ -84,7 +86,7 @@ object TPTP {
       }
       format match {
         case CommentFormat.BLOCK => s"/*$dollars$content*/"
-        case CommentFormat.LINE => s"%$dollars$content\n"
+        case CommentFormat.LINE => s"%$dollars$content"
       }
     }
   }

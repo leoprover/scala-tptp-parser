@@ -50,7 +50,8 @@ import scala.io.Source
  *
  * @author Alexander Steen
  * @see Original TPTP syntax definition at [[http://tptp.org/TPTP/SyntaxBNF.html]].
- * @note For the implementation of this parser v7.4.0.3 of the TPTP syntax was used.
+ * @note For the original implementation of this parser v7.4.0.3 of the TPTP syntax was used, but it's being updated constantly
+ *       to keep track with TPTP language updates.
  * @since January 2021
  */
 object TPTPParser {
@@ -760,10 +761,11 @@ object TPTPParser {
     def tptpFile(): Problem = {
       if (!tokens.hasNext) {
         // OK, empty file is fine
-        Problem(Vector.empty, Vector.empty)
+        Problem(Vector.empty, Vector.empty, Map.empty)
       } else {
         var formulas: Seq[AnnotatedFormula] = Vector.empty
-        var includes: Seq[(String, Seq[String], Seq[Comment])] = Vector.empty
+        var includes: Seq[Include] = Vector.empty
+        val formulaComments: collection.mutable.Map[String, Seq[Comment]] = collection.mutable.Map.empty
         var current_comments: Seq[Comment] = Vector.empty
         while (tokens.hasNext) {
           val t = peek()
@@ -772,11 +774,11 @@ object TPTPParser {
               t._2 match {
                 case "include" =>
                   val (file, idents) = include()
-                  includes = includes :+ (file, idents, current_comments)
+                  includes = includes :+ (file, (idents, current_comments))
                   current_comments = Vector.empty
                 case "thf" | "tff" | "fof" | "tcf" | "cnf" | "tpi" =>
                   val formula = annotatedFormula()
-                  formula.comments = current_comments
+                  formulaComments.addOne((formula.name, current_comments))
                   formulas = formulas :+ formula
                   current_comments = Vector.empty
                 case _ => error1(Seq("thf", "tff", "fof", "tcf", "cnf", "tpi", "include"), t)
@@ -786,7 +788,7 @@ object TPTPParser {
             case _ => error1(Seq("thf", "tff", "fof", "tcf", "cnf", "tpi", "include"), t)
           }
         }
-        Problem(includes, formulas)
+        Problem(includes, formulas, formulaComments.toMap)
       }
     }
 
