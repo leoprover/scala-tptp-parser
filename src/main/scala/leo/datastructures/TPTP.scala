@@ -3,8 +3,6 @@
 package leo
 package datastructures
 
-import leo.datastructures.TPTP.Comment.{CommentAssociatedType, CommentAssociation}
-
 /**
  * Collection of TPTP-related data types that are returned by the [[leo.modules.input.TPTPParser]].
  * An overview:
@@ -28,8 +26,9 @@ import leo.datastructures.TPTP.Comment.{CommentAssociatedType, CommentAssociatio
  * @author Alexander Steen
  */
 object TPTP {
-  /** Representation of TPTP include directives, where the first element in the file to be includes and the
-   * second element in a list of identifiers to be imported (empty if everything is imported). */
+  /** Representation of TPTP include directives, where the first element in the file to be includes, the
+   * second element in a list of identifiers to be imported (empty if everything is imported),
+   * the third element is a (possibly empty) list of comments associated to the import. */
   type Include = (String, Seq[String], Seq[Comment])
   /** Optional annotation at the end of an [[TPTP.AnnotatedFormula]]. */
   type Annotations = Option[(GeneralTerm, Option[Seq[GeneralTerm]])]
@@ -52,7 +51,7 @@ object TPTP {
           sb.append(s"include('$filename', [${inc.map(s => s"'$s'").mkString(",")}]).\n")
         }
       }
-      formulas.foreach { case f =>
+      formulas.foreach { f =>
         f.comments.foreach { c => sb.append(c.pretty) }
         sb.append(f.pretty)
         sb.append("\n")

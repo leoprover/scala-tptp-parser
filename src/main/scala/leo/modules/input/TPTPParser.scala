@@ -3,8 +3,7 @@
 package leo
 package modules.input
 
-import leo.datastructures.TPTP.Comment.{CommentAssociatedType, CommentAssociation, CommentFormat, CommentType}
-import leo.datastructures.TPTP.TCFAnnotated
+import leo.datastructures.TPTP.Comment.{CommentFormat, CommentType}
 
 import java.util.NoSuchElementException
 import scala.annotation.tailrec
@@ -56,7 +55,7 @@ import scala.io.Source
  */
 object TPTPParser {
   import datastructures.TPTP.{Problem, AnnotatedFormula, THFAnnotated, TFFAnnotated,
-    FOFAnnotated, CNFAnnotated, TPIAnnotated}
+    FOFAnnotated, CNFAnnotated, TPIAnnotated, TCFAnnotated}
   import datastructures.TPTP.THF.{Formula => THFFormula}
   import datastructures.TPTP.TFF.{Formula => TFFFormula}
   import datastructures.TPTP.FOF.{Formula => FOFFormula}
