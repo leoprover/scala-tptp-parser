@@ -3,7 +3,7 @@
 package leo
 package modules.input
 
-import leo.datastructures.TPTP.TCFAnnotated
+import leo.datastructures.TPTP.Comment.{CommentFormat, CommentType}
 
 import java.util.NoSuchElementException
 import scala.annotation.tailrec
@@ -50,12 +50,13 @@ import scala.io.Source
  *
  * @author Alexander Steen
  * @see Original TPTP syntax definition at [[http://tptp.org/TPTP/SyntaxBNF.html]].
- * @note For the implementation of this parser v7.4.0.3 of the TPTP syntax was used.
+ * @note For the original implementation of this parser v7.4.0.3 of the TPTP syntax was used, but it's being updated constantly
+ *       to keep track with TPTP language updates.
  * @since January 2021
  */
 object TPTPParser {
   import datastructures.TPTP.{Problem, AnnotatedFormula, THFAnnotated, TFFAnnotated,
-    FOFAnnotated, CNFAnnotated, TPIAnnotated}
+    FOFAnnotated, CNFAnnotated, TPIAnnotated, TCFAnnotated}
   import datastructures.TPTP.THF.{Formula => THFFormula}
   import datastructures.TPTP.TFF.{Formula => TFFFormula}
   import datastructures.TPTP.FOF.{Formula => FOFFormula}
@@ -291,8 +292,8 @@ object TPTPParser {
       }
       // ignore whitespace characters (ch.isWhitespace also matches linebreaks; so careful when re-ordering lines)
       else if (ch.isWhitespace) { consume(); hasNext0 }
-      // ignore block comments: consume everything until end of comment block
-      else if (ch == '/') {
+      // ignore inline block comments: consume everything until end of comment block
+      else if (ch == '/' && curOffset != 1) {
         consume()
         if (iter.hasNext && iter.head == '*') {
           consume()
@@ -330,8 +331,8 @@ object TPTPParser {
           throw new TPTPParseException(s"Unrecognized token '/${iter.head}'", curLine, curOffset-1)
         }
       }
-      // ignore line comments: consume percentage sign and everything else until newline
-      else if (ch == '%') {
+      // ignore inline line comments: consume percentage sign and everything else until newline
+      else if (ch == '%' && curOffset != 1) {
         consume()
         while (iter.hasNext && (iter.head != '\n' && iter.head != '\r')) { consume() }
         // dont need to check rest, just pass to recursive call
@@ -548,6 +549,58 @@ object TPTPParser {
           case '{' => tok(LBRACES, 1)
           case '}' => tok(RBRACES, 1)
           case '#' => tok(HASH, 1)
+          case '/' => // COMMENT_BLOCK
+            val sb: StringBuilder = new StringBuilder()
+            var tokenType = COMMENT_BLOCK
+            val firstLine = curLine
+            val offset = curOffset-1
+            if (iter.hasNext && iter.head == '*') {
+              // it is a block comment. consume everything until end of block
+              consume()
+              if (iter.hasNext && iter.head == '$') {tokenType = DEFINED_COMMENT_BLOCK; consume()}
+              if (iter.hasNext && iter.head == '$') {tokenType = SYSTEM_COMMENT_BLOCK; consume()}
+              var done = false
+              while (!done) {
+                while (iter.hasNext && iter.head != '*') {
+                  if (iter.head == '\n') { sb.append(consume()); line() }
+                  else if (iter.head == '\r') {
+                    sb.append(consume())
+                    if (iter.hasNext && iter.head == '\n') { sb.append(consume()) }
+                    line()
+                  } else { sb.append(consume()) }
+                }
+                if (iter.hasNext) {
+                  // iter.head equals '*', consume first
+                  consume()
+                  if (iter.hasNext) {
+                    if (iter.head == '/') {
+                      done = true
+                      consume()
+                    }
+                  } else {
+                    // Unclosed comment is a parsing error
+                    throw new TPTPParseException(s"Unclosed block comment", curLine, curOffset)
+                  }
+                } else {
+                  // Unclosed comment is a parsing error
+                  throw new TPTPParseException(s"Unclosed block comment", curLine, curOffset)
+                }
+              }
+              val payload = sb.toString()
+              (tokenType, payload, firstLine, offset)
+            } else {
+              // There cannot be a token starting with '/'
+              throw new TPTPParseException(s"Unrecognized token '/${iter.head}'", curLine, curOffset-1)
+            }
+          case '%' => // COMMENT_LINE
+            val sb: StringBuilder = new StringBuilder()
+            var tokenType = COMMENT_LINE
+            val offset = curOffset-1
+            if (iter.hasNext && iter.head == '$') {tokenType = DEFINED_COMMENT_LINE; consume()}
+            if (iter.hasNext && iter.head == '$') {tokenType = SYSTEM_COMMENT_LINE; consume()}
+            while (iter.hasNext && (iter.head != '\n' && iter.head != '\r')) { sb.append(consume()) }
+            val payload = sb.toString()
+            (tokenType, payload, curLine, offset)
           case _ => throw new TPTPParseException(s"Unrecognized token '$ch'", curLine, curOffset-1)
         }
       }
@@ -679,7 +732,8 @@ object TPTPParser {
           COMMA, DOT, COLON,
           RANGLE, STAR, PLUS,
           SEQUENTARROW,
-          LANGLE, HASH, IDENTITY = Value
+          LANGLE, HASH, IDENTITY,
+          COMMENT_LINE, COMMENT_BLOCK, DEFINED_COMMENT_LINE, DEFINED_COMMENT_BLOCK, SYSTEM_COMMENT_LINE, SYSTEM_COMMENT_BLOCK = Value
     }
   }
 
@@ -707,23 +761,34 @@ object TPTPParser {
     def tptpFile(): Problem = {
       if (!tokens.hasNext) {
         // OK, empty file is fine
-        Problem(Vector.empty, Vector.empty)
+        Problem(Vector.empty, Vector.empty, Map.empty)
       } else {
         var formulas: Seq[AnnotatedFormula] = Vector.empty
-        var includes: Seq[(String, Seq[String])] = Vector.empty
+        var includes: Seq[Include] = Vector.empty
+        val formulaComments: collection.mutable.Map[String, Seq[Comment]] = collection.mutable.Map.empty
+        var current_comments: Seq[Comment] = Vector.empty
         while (tokens.hasNext) {
           val t = peek()
           t._1 match {
             case LOWERWORD =>
               t._2 match {
-                case "include" => includes = includes :+ include()
-                case "thf" | "tff" | "fof" | "tcf" | "cnf" | "tpi" => formulas = formulas :+ annotatedFormula()
+                case "include" =>
+                  val (file, idents) = include()
+                  includes = includes :+ (file, (idents, current_comments))
+                  current_comments = Vector.empty
+                case "thf" | "tff" | "fof" | "tcf" | "cnf" | "tpi" =>
+                  val formula = annotatedFormula()
+                  formulaComments.addOne((formula.name, current_comments))
+                  formulas = formulas :+ formula
+                  current_comments = Vector.empty
                 case _ => error1(Seq("thf", "tff", "fof", "tcf", "cnf", "tpi", "include"), t)
               }
+            case COMMENT_BLOCK | COMMENT_LINE | DEFINED_COMMENT_BLOCK | DEFINED_COMMENT_LINE | SYSTEM_COMMENT_BLOCK | SYSTEM_COMMENT_LINE =>
+              current_comments = current_comments :+ comment()
             case _ => error1(Seq("thf", "tff", "fof", "tcf", "cnf", "tpi", "include"), t)
           }
         }
-        Problem(includes, formulas)
+        Problem(includes, formulas, formulaComments.toMap)
       }
     }
 
@@ -745,6 +810,18 @@ object TPTPParser {
       a(RPAREN)
       a(DOT)
       (filename, fs)
+    }
+
+    def comment(): Comment = {
+      val t = consume()
+      t._1 match {
+        case COMMENT_BLOCK => Comment(CommentFormat.BLOCK, CommentType.NORMAL, t._2)
+        case COMMENT_LINE => Comment(CommentFormat.LINE, CommentType.NORMAL, t._2)
+        case DEFINED_COMMENT_BLOCK => Comment(CommentFormat.BLOCK, CommentType.DEFINED, t._2)
+        case DEFINED_COMMENT_LINE => Comment(CommentFormat.LINE, CommentType.DEFINED, t._2)
+        case SYSTEM_COMMENT_BLOCK => Comment(CommentFormat.BLOCK, CommentType.SYSTEM, t._2)
+        case SYSTEM_COMMENT_LINE => Comment(CommentFormat.LINE, CommentType.SYSTEM, t._2)
+      }
     }
 
     def annotatedFormula(): AnnotatedFormula = {
