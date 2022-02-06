@@ -484,6 +484,9 @@ object TPTP {
     final case class NonclassicalDiamond(index: Option[Formula]) extends VararyConnective {
       override def pretty: String = if (index.isEmpty) s"<.>" else s"<#${index.get.pretty}>"
     }
+    final case class NonclassicalCone(index: Option[Formula]) extends VararyConnective {
+      override def pretty: String = if (index.isEmpty) s"/.\\" else s"/#${index.get.pretty}\\"
+    }
 
     sealed abstract class UnaryConnective extends Connective
     /** Negation connective */
@@ -797,6 +800,9 @@ object TPTP {
     }
     final case class NonclassicalDiamond(index: Option[Term]) extends VararyConnective {
       override def pretty: String = if (index.isEmpty) s"<.>" else s"<#${index.get.pretty}>"
+    }
+    final case class NonclassicalCone(index: Option[Term]) extends VararyConnective {
+      override def pretty: String = if (index.isEmpty) s"/.\\" else s"/#${index.get.pretty}\\"
     }
 
     sealed abstract class UnaryConnective extends Connective
