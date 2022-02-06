@@ -12,7 +12,8 @@ The package contains a data structure for the abstract syntax tree (AST) of the 
   * CNF: (Untyped) clause-normal form, and
   * TPI: TPTP Process Instruction language.
 
-The parser is based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html).
+The parser was initially based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html), 
+but should now be up-to-date with v7.5.0.0.
 
 **New since v1.4:** `scala-tptp-parser` also supports parsing the new TPTP format for non-classical logics (see http://tptp.org/NonClassicalLogic/)
 
