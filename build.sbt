@@ -18,8 +18,9 @@ lazy val tptpParser = (project in file("."))
                      |   - CNF: (Untyped) clause-normal form, and
                      |   - TPI: TPTP Process Instruction language.
                      |
-                     | The parser is based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html).""".stripMargin,
-    scalaVersion := "2.13.6",
+                     | The parser was initially based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html),
+                     | but is continuously updated to keep track of TPTP language updates.""".stripMargin,
+    scalaVersion := "2.13.8",
     // Version number explicitly removed as this is handled by the release plugin
 
     scmInfo := Some(ScmInfo(
@@ -37,7 +38,7 @@ lazy val tptpParser = (project in file("."))
     licenses += "MIT" -> url("https://opensource.org/licenses/MIT"),
     sonatypeCredentialHost := "s01.oss.sonatype.org",
 
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.9" % "test",
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.10" % "test",
 
     Compile / doc / scalacOptions ++= Seq(
       "-doc-title", "Scala TPTP parser",
