@@ -327,8 +327,9 @@ object TPTPParser {
           }
           hasNext0
         } else {
-          // There cannot be a token starting with '/'
-          throw new TPTPParseException(s"Unrecognized token '/${iter.head}'", curLine, curOffset-1)
+          // Because of the NCL short form /.\ and /#something\ there can be an expression (other than a comment) starting with '/'
+          lookahead = lookahead :+ tok(TPTPLexer.TPTPLexerTokenType.SLASH, 1)
+          true
         }
       }
       // ignore inline line comments: consume percentage sign and everything else until newline
