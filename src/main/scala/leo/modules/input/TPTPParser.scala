@@ -434,7 +434,6 @@ object TPTPParser {
             if (iter.hasNext && iter.head == '<') {
               consume()
               tok(SUBTYPE, 2)
-              throw new TPTPParseException(s"Read token 'SUBTYPE' ('<<') that is not supported.", curLine, curOffset-2)
             } else if (iter.hasNext && iter.head == '=') {
               consume()
               if (iter.hasNext && iter.head == '>') {
@@ -449,7 +448,7 @@ object TPTPParser {
                consume()
                 tok(NIFF, 3)
               } else {
-                throw new TPTPParseException("Unrecognized token '<~'", curLine, curOffset-2)
+                throw new TPTPParseException("Unrecognized token '<~'", curLine, curOffset-2) // TODO: Rework to two tokens (LANGLE and NOT)
               }
             } else
               tok(LANGLE, 1)
@@ -511,7 +510,7 @@ object TPTPParser {
                 consume()
                 tok(DESCRIPTIONCOMB, 3)
               } else {
-                throw new TPTPParseException("Unrecognized token '@@'", curLine, curOffset-2)
+                throw new TPTPParseException("Unrecognized token '@@'", curLine, curOffset-2) // TODO: Rework to two APP tokens
               }
             } else
               tok(APP, 1)
@@ -539,12 +538,11 @@ object TPTPParser {
               if (iter.hasNext && iter.head == '>') {
                 consume()
                 tok(SEQUENTARROW, 3)
-                throw new TPTPParseException(s"Read token 'SEQUENT ARROW' ('-->') that is not supported.", curLine, curOffset-3)
               } else {
-                throw new TPTPParseException(s"Unrecognized token '--'", curLine, curOffset-2)
+                throw new TPTPParseException(s"Unrecognized token '--'", curLine, curOffset-2) // TODO: Rework to two DASH tokens
               }
             } else {
-              throw new TPTPParseException(s"Unrecognized token '-'", curLine, curOffset-1)
+              tok(DASH, 1)
             }
           case '{' => tok(LBRACES, 1)
           case '}' => tok(RBRACES, 1)
@@ -729,7 +727,7 @@ object TPTPParser {
           TYFORALL, TYEXISTS, ASSIGNMENT,
           SUBTYPE,
           LPAREN, RPAREN, LBRACKET, RBRACKET, LBRACES, RBRACES,
-          COMMA, DOT, COLON,
+          COMMA, DOT, COLON, DASH,
           RANGLE, STAR, PLUS,
           SEQUENTARROW,
           LANGLE, HASH, IDENTITY,
