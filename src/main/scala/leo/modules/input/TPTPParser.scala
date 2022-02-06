@@ -547,12 +547,12 @@ object TPTPParser {
           case '{' => tok(LBRACES, 1)
           case '}' => tok(RBRACES, 1)
           case '#' => tok(HASH, 1)
-          case '/' => // COMMENT_BLOCK
-            val sb: StringBuilder = new StringBuilder()
-            var tokenType = COMMENT_BLOCK
-            val firstLine = curLine
-            val offset = curOffset-1
+          case '/' => // COMMENT_BLOCK or non-classical /.\ operator
             if (iter.hasNext && iter.head == '*') {
+              val sb: StringBuilder = new StringBuilder()
+              var tokenType = COMMENT_BLOCK
+              val firstLine = curLine
+              val offset = curOffset-1
               // it is a block comment. consume everything until end of block
               consume()
               if (iter.hasNext && iter.head == '$') {tokenType = DEFINED_COMMENT_BLOCK; consume()}
@@ -587,9 +587,10 @@ object TPTPParser {
               val payload = sb.toString()
               (tokenType, payload, firstLine, offset)
             } else {
-              // There cannot be a token starting with '/'
-              throw new TPTPParseException(s"Unrecognized token '/${iter.head}'", curLine, curOffset-1)
+              // '/' is a token in its own right now, as /.\ and /#something\ are NCL short-forms
+              tok(SLASH, 1)
             }
+          case '\\' => tok(BACKSLASH, 1)
           case '%' => // COMMENT_LINE
             val sb: StringBuilder = new StringBuilder()
             var tokenType = COMMENT_LINE
@@ -730,7 +731,7 @@ object TPTPParser {
           COMMA, DOT, COLON, DASH,
           RANGLE, STAR, PLUS,
           SEQUENTARROW,
-          LANGLE, HASH, IDENTITY,
+          LANGLE, HASH, IDENTITY, SLASH, BACKSLASH,
           COMMENT_LINE, COMMENT_BLOCK, DEFINED_COMMENT_LINE, DEFINED_COMMENT_BLOCK, SYSTEM_COMMENT_LINE, SYSTEM_COMMENT_BLOCK = Value
     }
   }
@@ -1158,11 +1159,11 @@ object TPTPParser {
           else {
             val next = peek()
             next._1 match {
-              case DOT => // Non-classical connective short
+              case DOT => // [.] Non-classical connective short
                 consume()
                 a(RBRACKET)
                 THF.ConnectiveTerm(THF.NonclassicalBox(None))
-              case HASH => // Non-classical connective shot
+              case HASH => // [#something] Non-classical connective short
                 // HASH is consumed by thfNCLIndex
                 val index = thfNCLIndex()
                 a(RBRACKET)
@@ -1179,7 +1180,7 @@ object TPTPParser {
             }
           }
 
-        case LANGLE =>  // Non-classical connective short
+        case LANGLE =>  // <.> or <#something> Non-classical connective short
           consume()
           val next = peek()
           next._1 match {
@@ -1192,10 +1193,26 @@ object TPTPParser {
               val index = thfNCLIndex()
               a(RANGLE)
               THF.ConnectiveTerm(THF.NonclassicalDiamond(Some(index)))
-            case _ => error2(s"Unrecognized input '${next._1}' for non-classical diamond conective.", next)
+            case _ => error2(s"Unrecognized input '${next._1}' for non-classical diamond connective <...>.", next)
           }
 
-        case LBRACES => // Non-classical connective LONG
+        case SLASH =>  // /.\ or /#something\ Non-classical connective short
+          consume()
+          val next = peek()
+          next._1 match {
+            case DOT =>
+              consume()
+              a(BACKSLASH)
+              THF.ConnectiveTerm(THF.NonclassicalCone(None))
+            case HASH =>
+              // HASH is consumed by thfNCLIndex
+              val index = thfNCLIndex()
+              a(BACKSLASH)
+              THF.ConnectiveTerm(THF.NonclassicalCone(Some(index)))
+            case _ => error2(s"Unrecognized input '${next._1}' for non-classical cone connective /...\\.", next)
+          }
+
+        case LBRACES => // {...} Non-classical connective LONG
           consume()
           val name: String = a(DOLLARWORD)._2
           var parameters: Seq[Either[THF.Formula, (THF.Formula, THF.Formula)]] = Seq.empty
@@ -1727,7 +1744,37 @@ object TPTPParser {
               }
               a(RPAREN)
               TFF.NonclassicalPolyaryFormula(TFF.NonclassicalDiamond(Some(index)), args)
-            case _ => error2(s"Unrecognized input '${next._1}' for non-classical diamond conective.", next)
+            case _ => error2(s"Unrecognized input '${next._1}' for non-classical diamond connective.", next)
+          }
+
+        case SLASH if tfx => // non-classical short form cone (only in TFX)
+          consume()
+          val next = peek()
+          next._1 match {
+            case DOT =>
+              consume()
+              a(BACKSLASH)
+              // operator end, arguments begin
+              a(LPAREN)
+              var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
+              while (o(COMMA, null) != null) {
+                args = args :+ tffLogicFormula0(tfx)
+              }
+              a(RPAREN)
+              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalCone(None), args)
+            case HASH =>
+              // HASH is consumed by thfNCLIndex
+              val index = tffNCLIndex()
+              a(BACKSLASH)
+              // operator end, arguments begin
+              a(LPAREN)
+              var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
+              while (o(COMMA, null) != null) {
+                args = args :+ tffLogicFormula0(tfx)
+              }
+              a(RPAREN)
+              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalCone(Some(index)), args)
+            case _ => error2(s"Unrecognized input '${next._1}' for non-classical cone  connective /...\\.", next)
           }
 
         case _ => error2(s"Unrecognized tff formula input '${tok._1}'", tok)
