@@ -839,6 +839,16 @@ object TPTPParser {
       }
     }
 
+    def role(): String = {
+      var role = a(LOWERWORD)._2
+      val subrole0 = o(DASH, null)
+      if (subrole0 != null) {
+        val subrole = generalTerm()
+        role = s"$role-${subrole.pretty}" // encode sub-roles as strings for now
+      }
+      role
+    }
+
     ////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////
     // THF formula stuff
@@ -859,7 +869,7 @@ object TPTPParser {
       a(LPAREN)
       val n = name()
       a(COMMA)
-      val r = a(LOWERWORD)._2
+      val r = role()
       a(COMMA)
       val f = thfFormula()
       var source: GeneralTerm = null
@@ -1379,7 +1389,7 @@ object TPTPParser {
       a(LPAREN)
       val n = name()
       a(COMMA)
-      val r = a(LOWERWORD)._2
+      val r = role()
       a(COMMA)
       val f = tffFormula(tfx)
       var source: GeneralTerm = null
@@ -2146,7 +2156,7 @@ object TPTPParser {
       a(LPAREN)
       val n = name()
       a(COMMA)
-      val r = a(LOWERWORD)._2
+      val r = role()
       a(COMMA)
       val f = fofFormula()
       var source: GeneralTerm = null
@@ -2290,7 +2300,7 @@ object TPTPParser {
       a(LPAREN)
       val n = name()
       a(COMMA)
-      val r = a(LOWERWORD)._2
+      val r = role()
       a(COMMA)
       val f = tcfFormula()
       var source: GeneralTerm = null
@@ -2360,7 +2370,7 @@ object TPTPParser {
       a(LPAREN)
       val n = name()
       a(COMMA)
-      val r = a(LOWERWORD)._2
+      val r = role()
       a(COMMA)
       val f = cnfFormula()
       var source: GeneralTerm = null
@@ -2475,7 +2485,7 @@ object TPTPParser {
       a(LPAREN)
       val n = name()
       a(COMMA)
-      val r = a(LOWERWORD)._2
+      val r = role()
       a(COMMA)
       val f = fofFormula()
       var source: GeneralTerm = null
