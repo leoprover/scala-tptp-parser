@@ -1215,7 +1215,11 @@ object TPTPParser {
 
         case LBRACES => // {...} Non-classical connective LONG
           consume()
-          val name: String = a(DOLLARWORD)._2
+          val next = peek()
+          val name: String = next._1 match {
+            case DOLLARWORD | DOLLARDOLLARWORD => next._2
+            case _ => error2(s"Start of nonclassical connective found and expecting DOLLARWORD or DOLLARDOLLARWORD, but token '${next._1}' found.", next)
+          }
           var parameters: Seq[Either[THF.Formula, (THF.Formula, THF.Formula)]] = Seq.empty
           if (o(LPAREN, null) != null) {
             parameters = Vector(thfNCLIndexOrParameter())
@@ -1699,7 +1703,11 @@ object TPTPParser {
 
         case LBRACES if tfx => //non-classical long form operator (only in TFX)
           consume()
-          val name: String = a(DOLLARWORD)._2
+          val next = peek()
+          val name: String = next._1 match {
+            case DOLLARWORD | DOLLARDOLLARWORD => next._2
+            case _ => error2(s"Start of nonclassical connective found and expecting DOLLARWORD or DOLLARDOLLARWORD, but token '${next._1}' found.", next)
+          }
           var parameters: Seq[Either[TFF.Term, (TFF.Term, TFF.Term)]] = Seq.empty
           if (o(LPAREN, null) != null) {
             parameters = Vector(tffNCLIndexOrParameter())
