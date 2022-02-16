@@ -897,7 +897,15 @@ object TPTPParser {
         case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD if peek(idx+1)._1 == COLON => // Typing
           thfAtomTyping()
         case _ =>
-          THF.Logical(thfLogicFormula())
+          val formula = thfLogicFormula()
+          formula match { /* might be a sequent */
+            case THF.Tuple(lhs) if tokens.hasNext && peek()._1 == SEQUENTARROW =>
+              consume()
+              val rhs = thfTuple(skipOpeningBracket = false)
+              THF.Sequent(lhs, rhs.elements)
+            case _ => /* it's just a formula */
+              THF.Logical(formula)
+          }
       }
     }
 
@@ -1171,13 +1179,7 @@ object TPTPParser {
                 THF.ConnectiveTerm(THF.NonclassicalBox(Some(index)))
 
               case _ => // Tuple
-                val f = thfLogicFormula()
-                var fs: Seq[THF.Formula] = Vector(f)
-                while (o(COMMA, null) != null) {
-                  fs = fs :+ thfLogicFormula()
-                }
-                a(RBRACKET)
-                THF.Tuple(fs)
+                thfTuple(skipOpeningBracket = true)
             }
           }
 
@@ -1249,6 +1251,21 @@ object TPTPParser {
           }
         } else f1
       } else f1
+    }
+
+    private[this] def thfTuple(skipOpeningBracket: Boolean): THF.Tuple = {
+      if (!skipOpeningBracket) a(LBRACKET) // Allows re-using it in thfUnitFormula
+      val rb = o(RBRACKET, null)
+      if (rb != null) THF.Tuple(Seq.empty)
+      else {
+        val f = thfLogicFormula()
+        var fs: Seq[THF.Formula] = Vector(f)
+        while (o(COMMA, null) != null) {
+          fs = fs :+ thfLogicFormula()
+        }
+        a(RBRACKET)
+        THF.Tuple(fs)
+      }
     }
 
     private[this] def typedVariable(): THF.TypedVariable = {
@@ -1436,6 +1453,11 @@ object TPTPParser {
       tok._1 match {
         case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD if peek(idx+1)._1 == COLON => // Typing
           tffAtomTyping()
+        case LBRACKET if tfx && peek(idx+1)._1 != DOT && peek(idx+1)._1 != HASH => // Tuple on formula level, so it's a sequent
+          val lhs = tffTuple()
+          a(SEQUENTARROW)
+          val rhs = tffTuple()
+          TFF.Sequent(lhs.elements, rhs.elements)
         case _ =>
           TFF.Logical(tffLogicFormula(tfx))
       }
@@ -1857,22 +1879,25 @@ object TPTPParser {
 
         // TFX only
         case LBRACKET if tfx => // Tuple
-          consume()
-          if (o(RBRACKET, null) == null) {
-            var entries: Seq[TFF.Term] = Vector(tffLogicFormulaOrTerm())
-            while (o(COMMA, null) != null) {
-              entries = entries :+ tffLogicFormulaOrTerm()
-            }
-            a(RBRACKET)
-            TFF.Tuple(entries)
-          } else {
-            // empty tuple
-            TFF.Tuple(Seq.empty)
-          }
+          tffTuple()
 
         case _ =>
           if (tfx) error(Seq(INT, RATIONAL, REAL, DOUBLEQUOTED, UPPERWORD, LOWERWORD, SINGLEQUOTED, DOLLARWORD, DOLLARDOLLARWORD, LBRACKET), tok)
           else error(Seq(INT, RATIONAL, REAL, DOUBLEQUOTED, UPPERWORD, LOWERWORD, SINGLEQUOTED, DOLLARWORD, DOLLARDOLLARWORD), tok)
+      }
+    }
+    private[this] def tffTuple(): TFF.Tuple = {
+      a(LBRACKET)
+      if (o(RBRACKET, null) == null) {
+        var entries: Seq[TFF.Term] = Vector(tffLogicFormulaOrTerm())
+        while (o(COMMA, null) != null) {
+          entries = entries :+ tffLogicFormulaOrTerm()
+        }
+        a(RBRACKET)
+        TFF.Tuple(entries)
+      } else {
+        // empty tuple
+        TFF.Tuple(Seq.empty)
       }
     }
 
