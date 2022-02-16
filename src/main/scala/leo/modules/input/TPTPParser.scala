@@ -896,16 +896,29 @@ object TPTPParser {
       tok._1 match {
         case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD if peek(idx+1)._1 == COLON => // Typing
           thfAtomTyping()
-        case _ =>
-          val formula = thfLogicFormula()
-          formula match { /* might be a sequent */
-            case THF.Tuple(lhs) if tokens.hasNext && peek()._1 == SEQUENTARROW =>
-              consume()
-              val rhs = thfTuple(skipOpeningBracket = false)
-              THF.Sequent(lhs, rhs.elements)
-            case _ => /* it's just a formula */
-              THF.Logical(formula)
-          }
+        case LBRACKET if peek(idx+1)._1 != DOT && peek(idx+1)._1 != HASH => // tuple or sequent
+          /* this is actually a hack that hurts: we validate here, although we should just parse.
+             This will make inputs like [a,b,c] & [e,f,g] a syntax error, although the syntax
+             allows this (nevertheless meaningless) statement. */
+          thfSequentOrTuple()
+        case _ => THF.Logical(thfLogicFormula())
+      }
+    }
+
+    private[this] def thfSequentOrTuple(): THF.Statement = {
+      val lp = o(LPAREN, null)
+      if (lp != null) {
+        val res = thfSequentOrTuple()
+        a(RPAREN)
+        res
+      } else {
+        val lhs = thfTuple(skipOpeningBracket = false)
+        if (o(SEQUENTARROW, null) != null) { // sequent
+          val rhs = thfTuple(skipOpeningBracket = false)
+          THF.Sequent(lhs.elements, rhs.elements)
+        } else { // tuple
+          THF.Logical(lhs)
+        }
       }
     }
 
