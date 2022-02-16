@@ -1454,12 +1454,23 @@ object TPTPParser {
         case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD if peek(idx+1)._1 == COLON => // Typing
           tffAtomTyping()
         case LBRACKET if tfx && peek(idx+1)._1 != DOT && peek(idx+1)._1 != HASH => // Tuple on formula level, so it's a sequent
-          val lhs = tffTuple()
-          a(SEQUENTARROW)
-          val rhs = tffTuple()
-          TFF.Sequent(lhs.elements, rhs.elements)
+          tffSequent()
         case _ =>
           TFF.Logical(tffLogicFormula(tfx))
+      }
+    }
+
+    private[this] def tffSequent(): TFF.Sequent = {
+      val lp = o(LPAREN, null)
+      if (lp != null) {
+        val res = tffSequent()
+        a(RPAREN)
+        res
+      } else {
+        val lhs = tffTuple()
+        a(SEQUENTARROW)
+        val rhs = tffTuple()
+        TFF.Sequent(lhs.elements, rhs.elements)
       }
     }
 
