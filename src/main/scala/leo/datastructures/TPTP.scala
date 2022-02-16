@@ -384,6 +384,10 @@ object TPTP {
       override def pretty: String = formula.pretty
       override def symbols: Set[String] = formula.symbols
     }
+    final case class Sequent(lhs: Seq[Formula], rhs: Seq[Formula]) extends Statement {
+      override def pretty: String = s"${lhs.map(_.pretty).mkString("[", ",", "]")} --> ${rhs.map(_.pretty).mkString("[", ",", "]")}"
+      override def symbols: Set[String] = lhs.flatMap(_.symbols).toSet union rhs.flatMap(_.symbols).toSet
+    }
 
     // Types as terms; for TH1 parsing. That's why we dont have a clean separation between terms and types here.
     // We don't care for well-typedness etc. in parsing. We can parse syntactically correct but completely meaningless
@@ -601,7 +605,11 @@ object TPTP {
       override def pretty: String = formula.pretty
       override def symbols: Set[String] = formula.symbols
     }
-
+    final case class Sequent(lhs: Seq[Formula], rhs: Seq[Formula]) extends Statement {
+      override def pretty: String = s"${lhs.map(_.pretty).mkString("[", ",", "]")} --> ${rhs.map(_.pretty).mkString("[", ",", "]")}"
+      override def symbols: Set[String] = lhs.flatMap(_.symbols).toSet union rhs.flatMap(_.symbols).toSet
+    }
+    
     sealed abstract class Formula {
       /** Returns a set of symbols (except variables) occurring in the formula. */
       def symbols: Set[String]
