@@ -435,7 +435,7 @@ object TPTP {
       override def symbols: Set[String] = elements.flatMap(_.symbols).toSet
     }
     final case class ConditionalTerm(condition: Formula, thn: Formula, els: Formula) extends Formula {
-      override def pretty: String = s"$$ite(${condition.pretty}, ${thn.pretty}, ${els.pretty})"
+      override def pretty: String = s"$$ite @ ${condition.pretty} @ ${thn.pretty} @ ${els.pretty}"
       override def symbols: Set[String] = condition.symbols ++ thn.symbols ++ els.symbols
     }
     final case class LetTerm(typing: Map[String, Type], binding: Seq[(Formula, Formula)], body: Formula) extends Formula {

@@ -1137,15 +1137,29 @@ object TPTPParser {
               val body = thfLogicFormula()
               a(RPAREN)
               THF.LetTerm(tyMap, definitions, body)
-            case "$ite" =>
-              a(LPAREN)
-              val cond = thfLogicFormula()
-              a(COMMA)
-              val thn = thfLogicFormula()
-              a(COMMA)
-              val els = thfLogicFormula()
-              a(RPAREN)
-              THF.ConditionalTerm(cond, thn, els)
+            case "$ite" => // We allow $ite both in functional form, i.e., $ite(c,a,b), and in applied form, i.e.,
+                           // $ite @ c @ a @ b. The latter is the proper one from the TPTP syntax BNF, the former
+                           // is only for convenience.
+              if (o(LPAREN, null) != null) {
+                // functional form
+                // LPAREN already consumed
+                val cond = thfLogicFormula()
+                a(COMMA)
+                val thn = thfLogicFormula()
+                a(COMMA)
+                val els = thfLogicFormula()
+                a(RPAREN)
+                THF.ConditionalTerm(cond, thn, els)
+              } else {
+                // applied form
+                a(APP)
+                val cond = thfUnitFormula(acceptEqualityLike = false)
+                a(APP)
+                val thn = thfUnitFormula(acceptEqualityLike = false)
+                a(APP)
+                val els = thfUnitFormula(acceptEqualityLike = false)
+                THF.ConditionalTerm(cond, thn, els)
+              }
             case _ => // general fof-like function
               var args: Seq[THF.Formula] = Vector.empty
               val lp = o(LPAREN, null)
