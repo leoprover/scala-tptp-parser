@@ -20,7 +20,7 @@ The parser aims at v7.5.0.0 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxB
 ## Install
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.leoprover/scala-tptp-parser_2.13.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.leoprover%22%20AND%20a:%22scala-tptp-parser_2.13%22)
 
-The Scala TPTP parser is available on [Maven Central](https://search.maven.org/artifact/io.github.leoprover/scala-tptp-parser_2.13) (current version: 1.6).
+The Scala TPTP parser is available on [Maven Central](https://search.maven.org/artifact/io.github.leoprover/scala-tptp-parser_2.13) (current version: 1.6.1).
 Snapshots are available on [Sonatype](https://s01.oss.sonatype.org/content/repositories/snapshots/io/github/leoprover/scala-tptp-parser_2.13/).
 
 ### Maven
@@ -30,7 +30,7 @@ In order to include `scala-tptp-parser` into your project via Maven, just add th
 <dependency>
   <groupId>io.github.leoprover</groupId>
   <artifactId>scala-tptp-parser_2.13</artifactId>
-  <version>1.6</version>
+  <version>1.6.1</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ In order to include `scala-tptp-parser` into your project via Maven, just add th
 
 In order to include `scala-tptp-parser` into your project via SBT, just add the following dependency to your `build.sbt`:
 ```scala
-libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.6"
+libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.6.1"
 ```
 
 ### Non-sbt-projects
@@ -89,6 +89,8 @@ try {
 
 ## Version history
 
+  - 1.6.1: Minor update to support applied form of $ite conditionals in THF (e.g., `$ite @ c @ a @ b`).
+           Functional style (`$ite(c,a,b)`) is still supported.
   - 1.6: Support for sequents in TFX and THF
   - 1.5: Support for block and line (user/defined/system) comments into the AST
     (limited to those which start at the beginning of a line). Thanks to [@XBagon](https://github.com/XBagon)
