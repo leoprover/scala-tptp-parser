@@ -1317,12 +1317,12 @@ object TPTPParser {
       val tok = peek()
       tok._1 match {
         case HASH => Left(thfNCLIndex())
-        case DOLLARWORD | DOLLARDOLLARWORD =>
+        case DOLLARWORD | DOLLARDOLLARWORD | LOWERWORD =>
           val lhs = THF.FunctionTerm(consume()._2, Seq.empty)
           a(ASSIGNMENT)
           val rhs = thfLogicFormula0()
           Right((lhs, rhs))
-        case _ => error2(s"Unexpected token type '${tok._1}' as parameter of non-classical operator: Either indexed constant or key-value parameter expected.", peek())
+        case _ => error2(s"Unexpected token type '${tok._1}' as parameter of non-classical operator: Either indexed (#) constant or key-value parameter expected.", peek())
       }
     }
 
@@ -1766,7 +1766,7 @@ object TPTPParser {
           val next = peek()
           val name: String = next._1 match {
             case DOLLARWORD | DOLLARDOLLARWORD => consume()._2
-            case _ => error2(s"Start of nonclassical connective found and expecting DOLLARWORD or DOLLARDOLLARWORD, but token '${next._1}' found.", next)
+            case _ => error2(s"Start of non-classical connective found and expecting DOLLARWORD or DOLLARDOLLARWORD, but token '${next._1}' found.", next)
           }
           var parameters: Seq[Either[TFF.Term, (TFF.Term, TFF.Term)]] = Seq.empty
           if (o(LPAREN, null) != null) {
@@ -1777,7 +1777,9 @@ object TPTPParser {
             a(RPAREN)
           }
           a(RBRACES)
+          // consume '@', newly introduced to syntax to make NCL TFF prolog parsable
           // operator done, arguments now
+          a(APP)
           a(LPAREN)
           var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
           while (o(COMMA, null) != null) {
@@ -2120,12 +2122,12 @@ object TPTPParser {
       val tok = peek()
       tok._1 match {
         case HASH => Left(tffNCLIndex())
-        case DOLLARWORD | DOLLARDOLLARWORD =>
+        case DOLLARWORD | DOLLARDOLLARWORD | LOWERWORD =>
           val lhs = TFF.AtomicTerm(consume()._2, Seq.empty)
           a(ASSIGNMENT)
           val rhs = tffTerm(tfx = true)
           Right((lhs, rhs))
-        case _ => error2(s"Unexpected token type '${tok._1}' as parameter of non-classical operator: Either indexed constant or key-value parameter expected.", peek())
+        case _ => error2(s"Unexpected token type '${tok._1}' as parameter of non-classical operator: Either indexed (#) constant or key-value parameter expected.", peek())
       }
     }
 

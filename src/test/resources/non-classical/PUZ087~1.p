@@ -49,79 +49,79 @@ tff(white_spot_type,type,white_spot: wiseman > $o).
 
 %----At least one wiseman has a white spot
 tff(at_least_one_white_spot,axiom,(
-    {$knows(#fool)}((white_spot(a)) | (white_spot(b)) | (white_spot(c))) )).
+    {$knows(#fool)} @ ((white_spot(a)) | (white_spot(b)) | (white_spot(c))) )).
 
 %----If one agent has a white spot all other agents can see this
 tff(b_knows_a,axiom,(
-    {$knows(#fool)}(
+    {$knows(#fool)} @ (
       ( white_spot(a)
-     => {$knows(#b)}(white_spot(a)) ) ) )).
+     => {$knows(#b)} @ (white_spot(a)) ) ) )).
 
 tff(c_knows_a,axiom,(
-    {$knows(#fool)}(
+    {$knows(#fool)} @ (
       ( white_spot(a)
-     => {$knows(#c)}(white_spot(a)) ) ) )).
+     => {$knows(#c)} @ (white_spot(a)) ) ) )).
 
 tff(a_knows_a,axiom,(
-    {$knows(#fool)}(
+    {$knows(#fool)} @ (
       ( white_spot(b) 
-     => {$knows(#a)}(white_spot(b)) ) ) )).
+     => {$knows(#a)} @ (white_spot(b)) ) ) )).
 
 tff(c_knows_b,axiom,(
-    {$knows(#fool)}(
+    {$knows(#fool)} @ (
       ( white_spot(b) 
-     => {$knows(#c)}(white_spot(b)) ) ) )).
+     => {$knows(#c)} @ (white_spot(b)) ) ) )).
 
 tff(a_knows_c,axiom,(
-    {$knows(#fool)}(
+    {$knows(#fool)} @ (
       ( white_spot(c) 
-     => {$knows(#a)}(white_spot(c)) ) ) )).
+     => {$knows(#a)} @ (white_spot(c)) ) ) )).
 
 tff(b_knows_c,axiom,(
-    {$knows(#fool)}(
+    {$knows(#fool)} @ (
       ( white_spot(c) 
-     => {$knows(#b)}(white_spot(c)) ) ) )).
+     => {$knows(#b)} @ (white_spot(c)) ) ) )).
 
 %----Black spots are visible
 tff(b_knows_not_a,axiom,(
-    {$knows(#fool)}(
+    {$knows(#fool)} @ (
       ( ~ white_spot(a) 
-     => {$knows(#b)}(~ white_spot(a)) ) ) )).
+     => {$knows(#b)} @ (~ white_spot(a)) ) ) )).
 
 tff(c_knows_not_a,axiom,(
-    {$knows(#fool)}( 
+    {$knows(#fool)} @ ( 
       ( ~ white_spot(a) 
-     => {$knows(#c)}(~ white_spot(a)) ) ) )).
+     => {$knows(#c)} @ (~ white_spot(a)) ) ) )).
 
 tff(a_knows_not_b,axiom,(
-    {$knows(#fool)}( 
+    {$knows(#fool)} @ ( 
       ( ~ white_spot(b) 
-     => {$knows(#a)}(~ white_spot(b)) ) ) )).
+     => {$knows(#a)} @ (~ white_spot(b)) ) ) )).
 
 tff(c_knows_not_b,axiom,(
-    {$knows(#fool)}( 
+    {$knows(#fool)} @ ( 
       ( ~ white_spot(b) 
-     => {$knows(#c)}(~ white_spot(b)) ) ) )).
+     => {$knows(#c)} @ (~ white_spot(b)) ) ) )).
 
 tff(a_knows_not_c,axiom,(
-    {$knows(#fool)}( 
+    {$knows(#fool)} @ ( 
       ( ~ white_spot(c) 
-     => {$knows(#a)}(~ white_spot(c)) ) ) )).
+     => {$knows(#a)} @ (~ white_spot(c)) ) ) )).
 
 tff(b_knows_not_c,axiom,(
-    {$knows(#fool)}( 
+    {$knows(#fool)} @ ( 
       ( ~ white_spot(c) 
-     => {$knows(#b)}(~ white_spot(c)) ) ) )).
+     => {$knows(#b)} @ (~ white_spot(c)) ) ) )).
 
 %----a and b don't know their situation
 tff(a_not_know,axiom,(
-    {$knows(#fool)}(~ {$knows(#a)}(white_spot(a))) )).
+    {$knows(#fool)} @ (~ {$knows(#a)} @ (white_spot(a))) )).
 
 tff(b_not_know,axiom,(
-    {$knows(#fool)}(~ {$knows(#b)}(white_spot(b))) )).
+    {$knows(#fool)} @ (~ {$knows(#b)} @ (white_spot(b))) )).
 
 %----Prove c knows white spot
 tff(c_knows,conjecture,(
-    {$knows(#c)}(white_spot(c)) )).
+    {$knows(#c)} @ (white_spot(c)) )).
 
 %------------------------------------------------------------------------------
