@@ -676,7 +676,7 @@ object TPTP {
       override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
     }
     final case class NonclassicalPolyaryFormula(connective: VararyConnective, args: Seq[Formula]) extends Formula {
-      override def pretty: String = s"${connective.pretty}(${args.map(_.pretty).mkString(",")})"
+      override def pretty: String = s"${connective.pretty}(${args.map(_.pretty).mkString(",")})" // The long form conncetive adds a '@' itself
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet
     }
 
@@ -801,7 +801,7 @@ object TPTP {
 
     sealed abstract class VararyConnective extends Connective
     final case class NonclassicalLongOperator(name: String, parameters: Seq[Either[Term, (Term, Term)]]) extends VararyConnective {
-      override def pretty: String = if (parameters.isEmpty) s"{$name}" else s"{$name(${parameters.map(p => p.fold(idx => s"#${idx.pretty}", kv => s"${kv._1.pretty} := ${kv._2.pretty}")).mkString(",")})}"
+      override def pretty: String = if (parameters.isEmpty) s"{$name} @ " else s"{$name(${parameters.map(p => p.fold(idx => s"#${idx.pretty}", kv => s"${kv._1.pretty} := ${kv._2.pretty}")).mkString(",")})} @ "
     }
     final case class NonclassicalBox(index: Option[Term]) extends VararyConnective {
       override def pretty: String = if (index.isEmpty) s"[.]" else s"[#${index.get.pretty}]"
