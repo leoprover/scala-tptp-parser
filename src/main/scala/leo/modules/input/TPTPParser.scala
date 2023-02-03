@@ -685,7 +685,8 @@ object TPTPParser {
           } else throw new TPTPParseException(s"Unexpected token within single quoted string", curLine, curOffset-sb.length()-1)
         } else throw new TPTPParseException(s"Unclosed single quoted string", curLine, curOffset-sb.length()-1)
       }
-      sb.toString()
+      if (sb.isEmpty) throw new TPTPParseException("Empty single quoted string not allowed. Did you forget an escape character '\\'?", curLine, curOffset)
+      else sb.toString()
     }
     @inline private[this] def collectDQChars(): String = {
       val sb: StringBuilder = new StringBuilder()
