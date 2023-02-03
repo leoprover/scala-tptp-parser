@@ -5,7 +5,6 @@ package modules.input
 
 import leo.datastructures.TPTP.Comment.{CommentFormat, CommentType}
 
-import java.util.NoSuchElementException
 import scala.annotation.tailrec
 import scala.io.Source
 
@@ -740,7 +739,8 @@ object TPTPParser {
 
   final class TPTPParser(tokens: TPTPLexer) {
     import TPTPLexer.TPTPLexerTokenType._
-    import datastructures.TPTP._
+    import datastructures.TPTP
+    import TPTP._
     type Token = TPTPLexer.TPTPLexerToken
     type TokenType = TPTPLexer.TPTPLexerTokenType.Value
 
@@ -1032,7 +1032,7 @@ object TPTPParser {
       val tok = peek()
       var feasibleForEq = false
       val f1 = tok._1 match {
-        case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD => // counts as ATOM, hence + expect equality
+        case LOWERWORD | DOLLARDOLLARWORD => // counts as ATOM, hence + expect equality
           feasibleForEq = true
           val fn = consume()._2
           var args: Seq[THF.Formula] = Vector.empty
@@ -1045,6 +1045,21 @@ object TPTPParser {
             a(RPAREN)
           }
           THF.FunctionTerm(fn, args)
+
+        case SINGLEQUOTED => // counts as ATOM, hence + expect equality // Singlequoted may need to get extra quotes
+          feasibleForEq = true
+          val fn = consume()._2
+          var args: Seq[THF.Formula] = Vector.empty
+          val lp = o(LPAREN, null)
+          if (lp != null) {
+            args = args :+ thfLogicFormula()
+            while (o(COMMA, null) != null) {
+              args = args :+ thfLogicFormula()
+            }
+            a(RPAREN)
+          }
+          if (TPTP.isLowerWord(fn)) THF.FunctionTerm(fn, args)
+          else THF.FunctionTerm(s"'$fn'", args)
 
         case UPPERWORD => // + expect equality
           feasibleForEq = true
@@ -1307,7 +1322,9 @@ object TPTPParser {
       a(HASH)
       val tok = peek()
       tok._1 match {
-        case LOWERWORD | SINGLEQUOTED | DOLLARWORD | DOLLARDOLLARWORD => THF.FunctionTerm(consume()._2, Seq.empty)
+        case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD => THF.FunctionTerm(consume()._2, Seq.empty)
+        case SINGLEQUOTED => val idx = consume()._2
+          if (TPTP.isLowerWord(idx)) THF.FunctionTerm(idx, Seq.empty) else THF.FunctionTerm(s"'$idx'", Seq.empty)
         case DOUBLEQUOTED => THF.DistinctObject(consume()._2)
         case INT | RATIONAL | REAL => THF.NumberTerm(number())
         case UPPERWORD => THF.Variable(consume()._2)
@@ -1647,7 +1664,7 @@ object TPTPParser {
 
         case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD | SINGLEQUOTED =>
           feasibleForEq = false
-          val formula = tffAtomicFormula(tfx)
+          val formula = tffAtomicFormula(tfx, tok._1 == SINGLEQUOTED)
           // might also be an atomicTerm if an equation follows
           // we check directly, not via outer-level, as otherwise we disallow proper terms
           if (tokens.hasNext && acceptEqualityLike) {
@@ -1869,7 +1886,7 @@ object TPTPParser {
       } else left
     }
 
-    @inline private[this] def tffAtomicFormula(tfx: Boolean): TFF.AtomicFormula = {
+    @inline private[this] def tffAtomicFormula(tfx: Boolean, functionIsSingleQuoted: Boolean = false): TFF.AtomicFormula = {
       val fn = consume()._2
       var args: Seq[TFF.Term] = Vector.empty
       if (o(LPAREN, null) != null) {
@@ -1879,10 +1896,12 @@ object TPTPParser {
         }
         a(RPAREN)
       }
-      TFF.AtomicFormula(fn, args)
+      if (functionIsSingleQuoted) {
+        if (TPTP.isLowerWord(fn)) TFF.AtomicFormula(fn, args) else TFF.AtomicFormula(s"'$fn'", args)
+      } else TFF.AtomicFormula(fn, args)
     }
-    private[this] def tffAtomicTerm(tfx: Boolean): TFF.AtomicTerm = { // This is syntactically the same as tffAtomicFormula
-      val formula = tffAtomicFormula(tfx)
+    private[this] def tffAtomicTerm(tfx: Boolean, functionIsSingleQuoted: Boolean = false): TFF.AtomicTerm = { // This is syntactically the same as tffAtomicFormula
+      val formula = tffAtomicFormula(tfx, functionIsSingleQuoted)
       TFF.AtomicTerm(formula.f, formula.args)
     }
 
@@ -1915,8 +1934,10 @@ object TPTPParser {
           TFF.DistinctObject(consume()._2)
         case UPPERWORD =>
           TFF.Variable(consume()._2)
-        case LOWERWORD | SINGLEQUOTED | DOLLARWORD | DOLLARDOLLARWORD =>
-          tffAtomicTerm(tfx)
+        case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD =>
+          tffAtomicTerm(tfx, functionIsSingleQuoted = false)
+        case SINGLEQUOTED =>
+          tffAtomicTerm(tfx, functionIsSingleQuoted = true)
 
         // TFX only
         case LBRACKET if tfx => // Tuple
@@ -2082,7 +2103,8 @@ object TPTPParser {
           a(RPAREN)
           TFF.FormulaTerm(TFF.ConditionalFormula(cond, thn, els))
 
-        case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD | SINGLEQUOTED => tffAtomicTerm(tfx)
+        case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD  => tffAtomicTerm(tfx, functionIsSingleQuoted = false)
+        case SINGLEQUOTED => tffAtomicTerm(tfx, functionIsSingleQuoted = true)
 
         case UPPERWORD => TFF.Variable(consume()._2)
 
@@ -2112,7 +2134,10 @@ object TPTPParser {
       a(HASH)
       val tok = peek()
       tok._1 match {
-        case LOWERWORD | SINGLEQUOTED | DOLLARWORD | DOLLARDOLLARWORD => TFF.AtomicTerm(consume()._2, Seq.empty)
+        case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD => TFF.AtomicTerm(consume()._2, Seq.empty)
+        case SINGLEQUOTED =>
+          val fn = consume()._2
+          if (TPTP.isLowerWord(fn)) TFF.AtomicTerm(fn, Seq.empty) else TFF.AtomicTerm(s"'$fn'", Seq.empty)
         case DOUBLEQUOTED => TFF.DistinctObject(consume()._2)
         case INT | RATIONAL | REAL => TFF.NumberTerm(number())
         case UPPERWORD => TFF.Variable(consume()._2)
@@ -2216,8 +2241,19 @@ object TPTPParser {
           a(RPAREN)
           result
         case UPPERWORD => TFF.TypeVariable(consume()._2)
-        case DOLLARWORD | LOWERWORD | SINGLEQUOTED =>
+        case DOLLARWORD | LOWERWORD =>
           val fn = consume()._2
+          if (o(LPAREN, null) != null) {
+            var arguments: Seq[TFF.Type] = Vector(tffAtomicType())
+            while (o(COMMA, null) != null) {
+              arguments = arguments :+ tffAtomicType()
+            }
+            a(RPAREN)
+            TFF.AtomicType(fn, arguments)
+          } else TFF.AtomicType(fn, Seq.empty)
+        case SINGLEQUOTED => // same as before, maybe add single quotes
+          val fn0 = consume()._2
+          val fn = if (TPTP.isLowerWord(fn0)) fn0 else s"'$fn0'"
           if (o(LPAREN, null) != null) {
             var arguments: Seq[TFF.Type] = Vector(tffAtomicType())
             while (o(COMMA, null) != null) {
@@ -2390,7 +2426,7 @@ object TPTPParser {
           FOF.DistinctObject(consume()._2)
         case UPPERWORD =>
           FOF.Variable(consume()._2)
-        case LOWERWORD | SINGLEQUOTED | DOLLARWORD | DOLLARDOLLARWORD =>
+        case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD =>
           val fn = consume()._2
           var args: Seq[FOF.Term] = Vector()
           if (o(LPAREN, null) != null) {
@@ -2401,6 +2437,17 @@ object TPTPParser {
             a(RPAREN)
           }
           FOF.AtomicTerm(fn, args)
+        case SINGLEQUOTED => // same as before, only add single quotes if necessary
+          val fn = consume()._2
+          var args: Seq[FOF.Term] = Vector()
+          if (o(LPAREN, null) != null) {
+            args = args :+ fofTerm()
+            while (o(COMMA, null) != null) {
+              args = args :+ fofTerm()
+            }
+            a(RPAREN)
+          }
+          if (TPTP.isLowerWord(fn)) FOF.AtomicTerm(fn, args) else FOF.AtomicTerm(s"'$fn'", args)
         case _ => error(Seq(INT, RATIONAL, REAL, DOUBLEQUOTED, UPPERWORD, LOWERWORD, SINGLEQUOTED, DOLLARWORD, DOLLARDOLLARWORD), tok)
       }
     }
@@ -2570,7 +2617,7 @@ object TPTPParser {
     private[this] def cnfTerm(): CNF.Term = {
       val tok = peek()
       tok._1 match {
-        case SINGLEQUOTED | LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD =>
+        case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD =>
           val fn = consume()._2
           var args: Seq[CNF.Term] = Vector.empty
           val lp = o(LPAREN, null)
@@ -2582,6 +2629,18 @@ object TPTPParser {
             a(RPAREN)
           }
           CNF.AtomicTerm(fn, args)
+        case SINGLEQUOTED => // same as before, only add single quotes if necessary
+          val fn = consume()._2
+          var args: Seq[CNF.Term] = Vector.empty
+          val lp = o(LPAREN, null)
+          if (lp != null) {
+            args = args :+ cnfTerm()
+            while (o(COMMA, null) != null) {
+              args = args :+ cnfTerm()
+            }
+            a(RPAREN)
+          }
+          if (TPTP.isLowerWord(fn)) CNF.AtomicTerm(fn, args) else CNF.AtomicTerm(s"'$fn'", args)
         case UPPERWORD =>
           CNF.Variable(consume()._2)
         case DOUBLEQUOTED =>
@@ -2665,7 +2724,10 @@ object TPTPParser {
     private[this] def untypedAtom(): String = {
       val tok = peek()
       tok._1 match {
-        case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD => consume()._2
+        case LOWERWORD | DOLLARDOLLARWORD => consume()._2
+        case SINGLEQUOTED =>
+          val atom = consume()._2
+          if (TPTP.isLowerWord(atom)) atom else s"'$atom'"
         case _ => error(Seq(SINGLEQUOTED, LOWERWORD, DOLLARDOLLARWORD), tok)
       }
     }
@@ -2723,8 +2785,8 @@ object TPTPParser {
     private[this] def generalData(): GeneralData = {
       val t = peek()
       t._1 match {
-        case LOWERWORD | SINGLEQUOTED =>
-          val function = consume()
+        case LOWERWORD =>
+          val function = consume()._2
           val t1 = o(LPAREN, null)
           if (t1 != null) {
             var args: Seq[GeneralTerm] = Seq.empty
@@ -2733,8 +2795,21 @@ object TPTPParser {
               args = args :+ generalTerm()
             }
             a(RPAREN)
-            MetaFunctionData(function._2, args)
-          } else MetaFunctionData(function._2, Seq.empty)
+            MetaFunctionData(function, args)
+          } else MetaFunctionData(function, Seq.empty)
+        case SINGLEQUOTED =>
+          val function0 = consume()._2
+          val function = if (TPTP.isLowerWord(function0)) function0 else s"'$function0'"
+          val t1 = o(LPAREN, null)
+          if (t1 != null) {
+            var args: Seq[GeneralTerm] = Seq.empty
+            args = args :+ generalTerm()
+            while (o(COMMA, null) != null) {
+              args = args :+ generalTerm()
+            }
+            a(RPAREN)
+            MetaFunctionData(function, args)
+          } else MetaFunctionData(function, Seq.empty)
         case UPPERWORD => MetaVariable(consume()._2)
         case DOUBLEQUOTED => DistinctObjectData(consume()._2)
         case INT | RATIONAL | REAL => NumberData(number())

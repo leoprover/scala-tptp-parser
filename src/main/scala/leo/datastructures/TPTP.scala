@@ -33,6 +33,74 @@ object TPTP {
   /** Optional annotation at the end of an [[TPTP.AnnotatedFormula]]. */
   type Annotations = Option[(GeneralTerm, Option[Seq[GeneralTerm]])]
 
+  // General purpose functions for dealing with TPTP names, atomicWords, etc. //
+
+  /**
+   * Transform the input string into a TPTP name.
+   * A TPTP name is either an integer, or an atomic word. If `name` is a TPTP integer or a TPTP lower word,
+   * it is returned unchanged. Otherwise (e.g., if it contains special characters),
+   * it is converted to a single quoted string (and characters ' and \ are escaped to \' and \\, respectively, if any).
+   */
+  final def convertStringToName(name: String): String = {
+    val integerRegex = "^[+-]?[\\d]+$"
+    if (name.matches(integerRegex)) name else convertStringToAtomicWord(name)
+  }
+
+  /**
+   * Converts a string to a TPTP atomic word.
+   *
+   * A TPTP atomic word is either a TPTP lower word or a single quoted string.
+   * If `word` is a TPTP lower word (i.e., starting with a lower case letter, followed by alphanumeric letters or underscore)
+   * it is returned unchanged. Otherwise (e.g., if it contains special characters), it is escaped to a single quoted string
+   * (and characters ' and \ are escaped to \' and \\, respectively, if any).
+   *
+   * @note Important: The Dollarworld $true and the atomic word '$true' are not the same! The input `word = "$true"` will
+   *       be escaped to `"'$true'"`. If you wish to use the input as dollar word or dollar-dollar word, don't use this function!
+   */
+  final def convertStringToAtomicWord(word: String): String = {
+//    val singleQuotedRegex = "^\\'([^\\'\\\\]|\\\\\\\\|\\\\\\')+\\'$"
+    if (isLowerWord(word)) word
+    else s"'${word.replace("\\", "\\\\").replace("'", "\\'")}'"
+  }
+
+  /**
+   * Escapes an TPTP atomic word (characters ' and \ are escaped to \' and \\, respectively, if any, not
+   * including outer quotes if any).
+   *
+   * Assumes: `word` is an TPTP atomic world (either single quoted or lower word).
+   * @note This will give strange results for inputs that are not atomic words (e.g., TPTP dollar words).
+   */
+  final def escapeAtomicWord(word: String): String = {
+    val isSingleQuoted = word.startsWith("'") && word.endsWith("'") && word.length >= 2
+    if (isSingleQuoted) {
+      val content = word.tail.init
+      s"'${content.replace("\\", "\\\\").replace("'", "\\'")}'"
+    } else word
+  }
+
+  private def escapeDistinctObject(name: String): String = {
+    name.replace("\\", "\\\\").replace("\"", "\\\"")
+  }
+
+  @inline final def isLowerWord(word: String): Boolean = {
+    @inline val simpleLowerWordRegex = "^[a-z][a-zA-Z\\d_]*$"
+    word.matches(simpleLowerWordRegex)
+  }
+
+  @inline final def isDollarWord(word: String): Boolean = word.startsWith("$") && !word.startsWith("$$")
+  @inline final def isDollarDollarWord(word: String): Boolean = word.startsWith("$$")
+  @inline final def isDollarOrDollarDollarWord(word: String): Boolean = word.startsWith("$")
+
+  /**
+   * Gives a TPTP-compliant representation of functor as represented in the TPTP AST.
+   * Dollar/DollarDollar words are kept as is, atomic words as escaped if necessary.
+   */
+  final def prettyFunctorString(functor: String): String = {
+    if (isDollarOrDollarDollarWord(functor)) functor
+    else escapeAtomicWord(functor)
+  }
+  // END //
+
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
   // TPTP problem file AST
@@ -227,16 +295,11 @@ object TPTP {
   }
 
   @inline private[this] final def prettifyAnnotated(prefix: String, name: String, role: String, formula: String, annotations: Annotations): String = {
-    if (annotations.isEmpty) s"$prefix(${escapeName(name)}, $role, $formula)."
+    if (annotations.isEmpty) s"$prefix(${convertStringToName(name)}, $role, $formula)."
     else {
-      if (annotations.get._2.isEmpty) s"$prefix(${escapeName(name)}, $role, $formula, ${annotations.get._1.pretty})."
-      else s"$prefix(${escapeName(name)}, $role, $formula, ${annotations.get._1.pretty}, [${annotations.get._2.get.map(_.pretty).mkString(",")}])."
+      if (annotations.get._2.isEmpty) s"$prefix(${convertStringToName(name)}, $role, $formula, ${annotations.get._1.pretty})."
+      else s"$prefix(${convertStringToName(name)}, $role, $formula, ${annotations.get._1.pretty}, [${annotations.get._2.get.map(_.pretty).mkString(",")}])."
     }
-  }
-
-  private def escapeName(name: String): String = {
-    val integerRegex = "^[+-]?[\\d]+$"
-    if (name.matches(integerRegex)) name else escapeAtomicWord(name)
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -303,7 +366,7 @@ object TPTP {
   /** @see [[GeneralData]] */
   final case class MetaFunctionData(f: String, args: Seq[GeneralTerm]) extends GeneralData {
     override def pretty: String = {
-      val escapedF = escapeAtomicWord(f)
+      val escapedF = prettyFunctorString(f)
       if (args.isEmpty) escapedF else s"$escapedF(${args.map(_.pretty).mkString(",")})"
     }
   }
@@ -347,15 +410,6 @@ object TPTP {
     override def pretty: String = s"$$fot(${formula.pretty})"
   }
 
-  private def escapeAtomicWord(word: String): String = {
-    val simpleLowerWordRegex = "^[a-z][a-zA-Z\\d_]*$"
-    if (word.matches(simpleLowerWordRegex)) word
-    else s"'${word.replace("\\","\\\\").replace("'", "\\'")}'"
-  }
-  private def escapeDistinctObject(name: String): String = {
-    name.replace("\\","\\\\").replace("\"", "\\\"")
-  }
-
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
   // THF AST
@@ -375,8 +429,8 @@ object TPTP {
     }
     final case class Typing(atom: String, typ: Type) extends Statement {
       override def pretty: String = {
-        val escapedName = if (atom.startsWith("$") || atom.startsWith("$$")) atom else escapeAtomicWord(atom)
-        s"$escapedName: ${typ.pretty}"
+        val prettyName = prettyFunctorString(atom)
+        s"$prettyName: ${typ.pretty}"
       }
       override def symbols: Set[String] = typ.symbols + atom
     }
@@ -399,11 +453,21 @@ object TPTP {
       def pretty: String
     }
 
-    /** Constant symbols `c` or FOF-style functional expressions `f(c)`. */
+    /** Constant symbols `c` or FOF-style functional expressions `f(c)`.
+     * Important: `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
+     * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
+     * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
+     * Any string that is neither a dollar/dollardollar word, a lower word, or a single quoted, is an invalid
+     * value for `f`. Use {{{TPTP.isLowerWord}}} to check if the string a valid (non-quoted) value for `f`, or
+     * transform via {{{TPTP.convertStringToAtomicWord}}} if necessary before.
+     * Quotes and Backslashes are not escaped in the representation, but will (need to) be escaped for pretty printing.
+     *
+     * @see [[TPTP.convertStringToAtomicWord]]
+    */
     final case class FunctionTerm(f: String, args: Seq[Formula]) extends Formula  {
       override def pretty: String = {
-        val escapedF = if (f.startsWith("$") || f.startsWith("$$")) f else escapeAtomicWord(f)
-        if (args.isEmpty) escapedF else s"$escapedF(${args.map(_.pretty).mkString(",")})"
+        val prettyF = prettyFunctorString(f)
+        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
       }
 
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
@@ -596,7 +660,7 @@ object TPTP {
     }
     final case class Typing(atom: String, typ: Type) extends Statement {
       override def pretty: String = {
-        val escapedName = if (atom.startsWith("$") || atom.startsWith("$$")) atom else escapeAtomicWord(atom)
+        val escapedName = prettyFunctorString(atom)
         s"$escapedName: ${typ.pretty}"
       }
       override def symbols: Set[String] = typ.symbols + atom
@@ -616,10 +680,19 @@ object TPTP {
       /** Returns a TPTP-compliant serialization of the formula. */
       def pretty: String
     }
+    /** Important: `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
+     * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
+     * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
+     * Any string that is neither a dollar/dollardollar word, a lower word, or a single quoted, is an invalid
+     * value for `f`. Use {{{TPTP.isLowerWord}}} to check if the string a valid (non-quoted) value for `f`, or
+     * transform via {{{TPTP.convertStringToAtomicWord}}} if necessary before.
+     * Quotes and Backslashes are not escaped in the representation, but will (need to) be escaped for pretty printing.
+     *
+     * @see [[TPTP.convertStringToAtomicWord]] */
     final case class AtomicFormula(f: String, args: Seq[Term]) extends Formula  {
       override def pretty: String = {
-        val escapedF = if (f.startsWith("$") || f.startsWith("$$")) f else escapeAtomicWord(f)
-        if (args.isEmpty) escapedF else s"$escapedF(${args.map(_.pretty).mkString(",")})"
+        val prettyF = prettyFunctorString(f)
+        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
       }
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
 
@@ -703,15 +776,23 @@ object TPTP {
     /**
      * A term expression that is either (1) a constant symbol `c`, or (2) a function expression `f(arg1,arg2,...,argN)`.
      * In case (1) it holds that `args.isEmpty`; in case (2) it holds that `args.nonEmpty`.
+
+     * `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
+     * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
+     * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
+     * Any string that is neither a dollar/dollardollar word, a lower word, or a single quoted, is an invalid
+     * value for `f`. Use {{{TPTP.isLowerWord}}} to check if the string a valid (non-quoted) value for `f`, or
+     * transform via {{{TPTP.convertStringToAtomicWord}}} if necessary before.
      *
+     * @see [[TPTP.convertStringToAtomicWord]]
      * @param f The name of the constant or function symbol
      * @param args The arguments `arg1`, `arg2`, ... of the function expression as sequence of [[Term]]s. The empty sequence
      *             if the term is a constant symbol.
      */
     final case class AtomicTerm(f: String, args: Seq[Term]) extends Term  {
       override def pretty: String = {
-        val escapedF = if (f.startsWith("$") || f.startsWith("$$")) f else escapeAtomicWord(f)
-        if (args.isEmpty) escapedF else s"$escapedF(${args.map(_.pretty).mkString(",")})"
+        val prettyF = prettyFunctorString(f)
+        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
       }
 
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
@@ -854,7 +935,7 @@ object TPTP {
     }
     final case class AtomicType(name: String, args: Seq[Type]) extends Type {
       override def pretty: String = {
-        val escapedName = if (name.startsWith("$") || name.startsWith("$$")) name else escapeAtomicWord(name)
+        val escapedName = prettyFunctorString(name)
         if (args.isEmpty) escapedName else s"$escapedName(${args.map(_.pretty).mkString(",")})"
       }
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet + name
@@ -898,8 +979,8 @@ object TPTP {
     }
     final case class Typing(atom: String, typ: Type) extends Statement {
       override def pretty: String = {
-        val escapedName = if (atom.startsWith("$") || atom.startsWith("$$")) atom else escapeAtomicWord(atom)
-        s"$escapedName: ${typ.pretty}"
+        val prettyName = prettyFunctorString(atom)
+        s"$prettyName: ${typ.pretty}"
       }
       override def symbols: Set[String] = typ.symbols + atom
     }
@@ -942,10 +1023,18 @@ object TPTP {
       /** Returns a TPTP-compliant serialization of the formula. */
       def pretty: String
     }
+    /** `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
+     * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
+     * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
+     * Any string that is neither a dollar/dollardollar word, a lower word, or a single quoted, is an invalid
+     * value for `f`. Use {{{TPTP.isLowerWord}}} to check if the string a valid (non-quoted) value for `f`, or
+     * transform via {{{TPTP.convertStringToAtomicWord}}} if necessary before.
+     *
+     * @see [[TPTP.convertStringToAtomicWord]] */
     final case class AtomicFormula(f: String, args: Seq[Term]) extends Formula  {
       override def pretty: String = {
-        val escapedF = if (f.startsWith("$") || f.startsWith("$$")) f else escapeAtomicWord(f)
-        if (args.isEmpty) escapedF else s"$escapedF(${args.map(_.pretty).mkString(",")})"
+        val prettyF = prettyFunctorString(f)
+        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
       }
 
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
@@ -982,10 +1071,18 @@ object TPTP {
       /** Returns a TPTP-compliant serialization of the term. */
       def pretty: String
     }
+    /** `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
+     * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
+     * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
+     * Any string that is neither a dollar/dollardollar word, a lower word, or a single quoted, is an invalid
+     * value for `f`. Use {{{TPTP.isLowerWord}}} to check if the string a valid (non-quoted) value for `f`, or
+     * transform via {{{TPTP.convertStringToAtomicWord}}} if necessary before.
+     *
+     * @see [[TPTP.convertStringToAtomicWord]] */
     final case class AtomicTerm(f: String, args: Seq[Term]) extends Term  {
       override def pretty: String = {
-        val escapedF = if (f.startsWith("$") || f.startsWith("$$")) f else escapeAtomicWord(f)
-        if (args.isEmpty) escapedF else s"$escapedF(${args.map(_.pretty).mkString(",")})"
+        val prettyF = prettyFunctorString(f)
+        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
       }
 
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
@@ -1083,10 +1180,18 @@ object TPTP {
       override def symbols: Set[String] = left.symbols ++ right.symbols
     }
 
+    /** `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
+     * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
+     * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
+     * Any string that is neither a dollar/dollardollar word, a lower word, or a single quoted, is an invalid
+     * value for `f`. Use {{{TPTP.isLowerWord}}} to check if the string a valid (non-quoted) value for `f`, or
+     * transform via {{{TPTP.convertStringToAtomicWord}}} if necessary before.
+     *
+     * @see [[TPTP.convertStringToAtomicWord]] */
     final case class AtomicFormula(f: String, args: Seq[Term])  {
       def pretty: String = {
-        val escapedF = if (f.startsWith("$") || f.startsWith("$$")) f else escapeAtomicWord(f)
-        if (args.isEmpty) escapedF else s"$escapedF(${args.map(_.pretty).mkString(",")})"
+        val prettyF = prettyFunctorString(f)
+        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
       }
 
       def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
@@ -1103,10 +1208,18 @@ object TPTP {
       /** Returns a TPTP-compliant serialization of the term. */
       def pretty: String
     }
+    /** `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
+     * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
+     * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
+     * Any string that is neither a dollar/dollardollar word, a lower word, or a single quoted, is an invalid
+     * value for `f`. Use {{{TPTP.isLowerWord}}} to check if the string a valid (non-quoted) value for `f`, or
+     * transform via {{{TPTP.convertStringToAtomicWord}}} if necessary before.
+     *
+     * @see [[TPTP.convertStringToAtomicWord]] */
     final case class AtomicTerm(f: String, args: Seq[Term]) extends Term  {
       override def pretty: String = {
-        val escapedF = if (f.startsWith("$") || f.startsWith("$$")) f else escapeAtomicWord(f)
-        if (args.isEmpty) escapedF else s"$escapedF(${args.map(_.pretty).mkString(",")})"
+        val prettyF = prettyFunctorString(f)
+        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
       }
 
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
