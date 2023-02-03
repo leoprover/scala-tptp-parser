@@ -57,7 +57,7 @@ A small sample application can be seen below:
 
 ```scala
 import leo.modules.input.{TPTPParser => Parser}
-import TPTPParser.TPTPParseException
+import Parser.TPTPParseException
 import leo.datastructures.TPTP.THF
 
 try {
