@@ -749,7 +749,7 @@ object TPTP {
       override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
     }
     final case class NonclassicalPolyaryFormula(connective: VararyConnective, args: Seq[Formula]) extends Formula {
-      override def pretty: String = s"${connective.pretty}(${args.map(_.pretty).mkString(",")})" // The long form conncetive adds a '@' itself
+      override def pretty: String = s"(${connective.pretty}(${args.map(_.pretty).mkString(",")}))" // The long form conncetive adds a '@' itself
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet
     }
 
