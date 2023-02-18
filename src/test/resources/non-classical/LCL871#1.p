@@ -22,16 +22,14 @@ thf(simple_s5,logic,(
         [ $logicfile == 'LOG002_1.l',
           $constants == $rigid,
           $quantification == $cumulative,
-          $consequence == $global,
           $modalities == $modal_system_K ] )).
 
 %----Specify an uninterpreted predicate symbol f
 thf(f_type,type,f: $i > $o).
 
 thf(converse_barcan_formula,conjecture,
-    ( ( [.] @ 
-          ! [X: $i] : ( f @ X ) )
-   => ( ! [X: $i] : ( [.] @ (f @ X) ) ) ) ).
+    ( ( [.] (! [X: $i] : ( f @ X )) )
+   => ( ! [X: $i] : ( [.] (f @ X) ) ) ) ).
 
 %----Using long connectives it is ...
 % thf(converse_barcan_formula,conjecture,
