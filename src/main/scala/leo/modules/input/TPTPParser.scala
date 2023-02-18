@@ -1219,6 +1219,7 @@ object TPTPParser {
                 // HASH is consumed by thfNCLIndex
                 val index = thfNCLIndex()
                 a(RBRACKET)
+                // Strictly speaking, this is not TPTP compliant. We still support it, and make the pretty print deal with it.
                 THF.ConnectiveTerm(THF.NonclassicalBox(Some(index)))
 
               case _ => // Tuple
@@ -1735,13 +1736,18 @@ object TPTPParser {
               consume() // consume DOT
               a(RBRACKET)
               // operator end, arguments begin
-              a(LPAREN)
+              // Old BEGIN
+              /*a(LPAREN)
               var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
               while (o(COMMA, null) != null) {
                 args = args :+ tffLogicFormula0(tfx)
               }
-              a(RPAREN)
-              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalBox(None), args)
+              a(RPAREN)*/
+              // old END
+              // Decision in Feb 2023: [.] and <.> can only be unary.
+              // So parse a unit formula directly.
+              val body = tffUnitFormula(tfx, acceptEqualityLike = false)
+              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalBox(None), Seq(body))
 
             case HASH => // [#...]
               consume() // consume LBRACKET
@@ -1750,13 +1756,20 @@ object TPTPParser {
               val index = tffNCLIndex()
               a(RBRACKET)
               // operator end, arguments begin
-              a(LPAREN)
+              // Old BEGIN
+              /* a(LPAREN)
               var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
               while (o(COMMA, null) != null) {
                 args = args :+ tffLogicFormula0(tfx)
               }
-              a(RPAREN)
-              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalBox(Some(index)), args)
+              a(RPAREN) */
+              // Old END
+              // Decision in Feb 2023: [.] and <.> can only be unary.
+              // So parse a unit formula directly.
+              // Strictly speaking, TPTP does not support index values as part of short form connectives any more.
+              // We will accept it because we can! And make the pretty print deal with it.
+              val body = tffUnitFormula(tfx, acceptEqualityLike = false)
+              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalBox(Some(index)), Seq(body))
 
             case _ => // Same as DOUBLEQUOTED, INT, RATIONAL, REAL
               feasibleForEq = false
@@ -1814,29 +1827,41 @@ object TPTPParser {
               consume()
               a(RANGLE)
               // operator end, arguments begin
-              a(LPAREN)
+              // Old BEGIN
+              /* a(LPAREN)
               var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
               while (o(COMMA, null) != null) {
                 args = args :+ tffLogicFormula0(tfx)
               }
-              a(RPAREN)
-              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalDiamond(None), args)
+              a(RPAREN) */
+              // Old END
+              // Decision in Feb 2023: [.] and <.> can only be unary.
+              // So parse a unit formula directly.
+              val body = tffUnitFormula(tfx, acceptEqualityLike = false)
+              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalDiamond(None), Seq(body))
             case HASH => // Non-classical connective shot
               // HASH is consumed by thfNCLIndex
               val index = tffNCLIndex()
               a(RANGLE)
               // operator end, arguments begin
-              a(LPAREN)
+              // Old BEGIN
+              /* a(LPAREN)
               var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
               while (o(COMMA, null) != null) {
                 args = args :+ tffLogicFormula0(tfx)
               }
-              a(RPAREN)
-              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalDiamond(Some(index)), args)
+              a(RPAREN) */
+              // Old END
+              // Decision in Feb 2023: [.] and <.> can only be unary.
+              // So parse a unit formula directly.
+              // Strictly speaking, TPTP does not support index values as part of short form connectives any more.
+              // We will accept it because we can! And make the pretty print deal with it.
+              val body = tffUnitFormula(tfx, acceptEqualityLike = false)
+              TFF.NonclassicalPolyaryFormula(TFF.NonclassicalDiamond(Some(index)), Seq(body))
             case _ => error2(s"Unrecognized input '${next._1}' for non-classical diamond connective.", next)
           }
 
-        case SLASH if tfx => // non-classical short form cone (only in TFX)
+        case SLASH if tfx => // non-classical short form cone (only in TFX) // TODO: What to do with /.\ ?
           consume()
           val next = peek()
           next._1 match {

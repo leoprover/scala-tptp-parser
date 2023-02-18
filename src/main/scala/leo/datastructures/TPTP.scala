@@ -885,13 +885,16 @@ object TPTP {
       override def pretty: String = if (parameters.isEmpty) s"{$name} @ " else s"{$name(${parameters.map(p => p.fold(idx => s"#${idx.pretty}", kv => s"${kv._1.pretty} := ${kv._2.pretty}")).mkString(",")})} @ "
     }
     final case class NonclassicalBox(index: Option[Term]) extends VararyConnective {
-      override def pretty: String = if (index.isEmpty) s"[.]" else s"[#${index.get.pretty}]"
+      override def pretty: String = if (index.isEmpty) s"[.]" else s"{$$box(#${index.get.pretty})} @ "
+      // Short form with index is not TPTP compliant anymore, so pretty print it as long form
     }
     final case class NonclassicalDiamond(index: Option[Term]) extends VararyConnective {
-      override def pretty: String = if (index.isEmpty) s"<.>" else s"<#${index.get.pretty}>"
+      override def pretty: String = if (index.isEmpty) s"<.>" else s"{$$dia(#${index.get.pretty})} @ "
+      // Short form with index is not TPTP compliant anymore, so pretty print it as long form
     }
     final case class NonclassicalCone(index: Option[Term]) extends VararyConnective {
       override def pretty: String = if (index.isEmpty) s"/.\\" else s"/#${index.get.pretty}\\"
+      // TODO: What to do here?
     }
 
     sealed abstract class UnaryConnective extends Connective
