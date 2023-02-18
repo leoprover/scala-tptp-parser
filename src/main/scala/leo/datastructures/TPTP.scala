@@ -547,10 +547,13 @@ object TPTP {
       override def pretty: String = if (parameters.isEmpty) s"{$name}" else s"{$name(${parameters.map(p => p.fold(idx => s"#${idx.pretty}", kv => s"${kv._1.pretty} := ${kv._2.pretty}")).mkString(",")})}"
     }
     final case class NonclassicalBox(index: Option[Formula]) extends VararyConnective {
-      override def pretty: String = if (index.isEmpty) s"[.]" else s"[#${index.get.pretty}]"
+//      override def pretty: String = if (index.isEmpty) s"[.]" else s"[#${index.get.pretty}]"
+      // FIXME: For the moment: Print short form as long form (to avoid explicit application with @).
+      override def pretty: String = if (index.isEmpty) s"{$$box}" else s"{$$box(#${index.get.pretty})}"
     }
     final case class NonclassicalDiamond(index: Option[Formula]) extends VararyConnective {
-      override def pretty: String = if (index.isEmpty) s"<.>" else s"<#${index.get.pretty}>"
+      // FIXME: For the moment: Print short form as long form (to avoid explicit application with @).
+      override def pretty: String = if (index.isEmpty) s"{$$dia}" else s"{$$dia(#${index.get.pretty})}"
     }
     final case class NonclassicalCone(index: Option[Formula]) extends VararyConnective {
       override def pretty: String = if (index.isEmpty) s"/.\\" else s"/#${index.get.pretty}\\"

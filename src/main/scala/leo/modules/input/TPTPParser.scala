@@ -1214,13 +1214,17 @@ object TPTPParser {
               case DOT => // [.] Non-classical connective short
                 consume()
                 a(RBRACKET)
-                THF.ConnectiveTerm(THF.NonclassicalBox(None))
+                val body = thfUnitFormula(acceptEqualityLike = false)
+                val connective = THF.ConnectiveTerm(THF.NonclassicalBox(None))
+                THF.BinaryFormula(THF.App, connective, body)
               case HASH => // [#something] Non-classical connective short
                 // HASH is consumed by thfNCLIndex
                 val index = thfNCLIndex()
                 a(RBRACKET)
                 // Strictly speaking, this is not TPTP compliant. We still support it, and make the pretty print deal with it.
-                THF.ConnectiveTerm(THF.NonclassicalBox(Some(index)))
+                val body = thfUnitFormula(acceptEqualityLike = false)
+                val connective = THF.ConnectiveTerm(THF.NonclassicalBox(Some(index)))
+                THF.BinaryFormula(THF.App, connective, body)
 
               case _ => // Tuple
                 thfTuple(skipOpeningBracket = true)
@@ -1234,16 +1238,22 @@ object TPTPParser {
             case DOT =>
               consume()
               a(RANGLE)
-              THF.ConnectiveTerm(THF.NonclassicalDiamond(None))
+              val body = thfUnitFormula(acceptEqualityLike = false)
+              val connective = THF.ConnectiveTerm(THF.NonclassicalDiamond(None))
+              THF.BinaryFormula(THF.App, connective, body)
             case HASH => // Non-classical connective shot
               // HASH is consumed by thfNCLIndex
               val index = thfNCLIndex()
               a(RANGLE)
-              THF.ConnectiveTerm(THF.NonclassicalDiamond(Some(index)))
+              // Strictly speaking, this is not TPTP compliant. We still support it, and make the pretty print deal with it.
+              val body = thfUnitFormula(acceptEqualityLike = false)
+              val connective = THF.ConnectiveTerm(THF.NonclassicalDiamond(Some(index)))
+              THF.BinaryFormula(THF.App, connective, body)
+
             case _ => error2(s"Unrecognized input '${next._1}' for non-classical diamond connective <...>.", next)
           }
 
-        case SLASH =>  // /.\ or /#something\ Non-classical connective short
+        case SLASH =>  // /.\ or /#something\ Non-classical connective short // TODO: What to do with this?
           consume()
           val next = peek()
           next._1 match {
