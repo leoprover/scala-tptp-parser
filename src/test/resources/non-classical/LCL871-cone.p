@@ -23,9 +23,9 @@ thf(simple_s5,logic,( $xxx )).
 thf(f_type,type,f: $i > $o).
 
 thf(converse_barcan_formula,conjecture,
-    ( ( /.\ @ 
+    ( ( /.\  
           ! [X: $i] : ( f @ X ) )
-   => ( ! [X: $i] : ( /#a\ @ (f @ X) ) ) ) ).
+   => ( ! [X: $i] : ( /#a\ (f @ X) ) ) ) ).
 
 %----Using long connectives it is ...
 % thf(converse_barcan_formula,conjecture,
