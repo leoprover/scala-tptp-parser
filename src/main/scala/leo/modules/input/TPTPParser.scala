@@ -1826,16 +1826,19 @@ object TPTPParser {
             a(RPAREN)
           }
           a(RBRACES)
-          // consume '@', newly introduced to syntax to make NCL TFF prolog parsable
+          // consume '@' (if existing), newly introduced to syntax to make NCL TFF prolog parsable
           // operator done, arguments now
-          a(APP)
-          a(LPAREN)
-          var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
-          while (o(COMMA, null) != null) {
-            args = args :+ tffLogicFormula0(tfx)
+          if (o(APP, null) != null) {
+            a(LPAREN)
+            var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
+            while (o(COMMA, null) != null) {
+              args = args :+ tffLogicFormula0(tfx)
+            }
+            a(RPAREN)
+            TFF.NonclassicalPolyaryFormula(TFF.NonclassicalLongOperator(name, index, parameters), args)
+          } else {
+            TFF.NonclassicalPolyaryFormula(TFF.NonclassicalLongOperator(name, index, parameters), Seq.empty)
           }
-          a(RPAREN)
-          TFF.NonclassicalPolyaryFormula(TFF.NonclassicalLongOperator(name, index, parameters), args)
 
         case LANGLE if tfx => // non-classical short form diamond (only in TFX)
           consume()
@@ -2126,12 +2129,20 @@ object TPTPParser {
           a(RPAREN)
           TFF.FormulaTerm(TFF.ConditionalFormula(cond, thn, els))
 
+        case LBRACES | LANGLE | SLASH => TFF.FormulaTerm(tffUnitFormula(tfx, acceptEqualityLike))
+        case LBRACKET => // Might be NCL operator or tuple
+          val next = peek(1)
+          next._1 match {
+            case DOT | HASH => TFF.FormulaTerm(tffUnitFormula(tfx, acceptEqualityLike))
+            case _ => tffTerm0(tfx)
+          }
+
         case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD  => tffAtomicTerm(tfx, functionIsSingleQuoted = false)
         case SINGLEQUOTED => tffAtomicTerm(tfx, functionIsSingleQuoted = true)
 
         case UPPERWORD => TFF.Variable(consume()._2)
 
-        case DOUBLEQUOTED | INT | RATIONAL | REAL | LBRACKET => tffTerm0(tfx)
+        case DOUBLEQUOTED | INT | RATIONAL | REAL => tffTerm0(tfx)
 
         case _ => error2(s"Unrecognized tff formula input '${tok._1}'", tok)
       }

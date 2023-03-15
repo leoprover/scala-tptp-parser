@@ -525,6 +525,7 @@ object TPTP {
      * When used with short connectives ([.], <.>, /.\) it will print as unary connective (without @ sign). */
     final case class NonclassicalPolyaryFormula(connective: VararyNonclassicalOperator, args: Seq[Formula]) extends Formula {
       override def pretty: String = connective match {
+        case NonclassicalLongOperator(_, _, _) if args.isEmpty => s"${connective.pretty}"
         case NonclassicalLongOperator(_, _, _) => s"(${connective.pretty} @ ${args.map(_.pretty).mkString(" @ ")})"
         // In the following case (box/dia/cone shortform) args should just contain one element, so the mkstring(.)-call is arbitrary.
         case NonclassicalBox(_) | NonclassicalDiamond(_) | NonclassicalCone(_)  => s"(${connective.pretty} ${args.map(_.pretty).mkString(" ")})"
