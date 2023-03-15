@@ -772,7 +772,12 @@ object TPTP {
     /** Non-classical formula as per recent TPTP NHF standard. The connective is n-ary with arbitrary n, see the
      * TPTP documentation which connective names have pre-defined meaning. */
     final case class NonclassicalPolyaryFormula(connective: VararyNonclassicalOperator, args: Seq[Formula]) extends Formula {
-      override def pretty: String = s"(${connective.pretty}(${args.map(_.pretty).mkString(",")}))" // The long form conncetive adds a '@' itself
+
+      // The long form conncetive adds a '@' itself. Need to remove it again if args is empty :-(
+      override def pretty: String = if (args.isEmpty) {
+        val conPretty = connective.pretty
+        if (conPretty.endsWith("@ ")) s"(${conPretty.dropRight(2)}" else s"(${connective.pretty}"
+      } else s"(${connective.pretty}(${args.map(_.pretty).mkString(",")}))"
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet
     }
 
