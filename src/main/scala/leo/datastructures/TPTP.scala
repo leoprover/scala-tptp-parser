@@ -58,7 +58,6 @@ object TPTP {
    *       be escaped to `"'$true'"`. If you wish to use the input as dollar word or dollar-dollar word, don't use this function!
    */
   final def convertStringToAtomicWord(word: String): String = {
-//    val singleQuotedRegex = "^\\'([^\\'\\\\]|\\\\\\\\|\\\\\\')+\\'$"
     if (isLowerWord(word)) word
     else s"'${word.replace("\\", "\\\\").replace("'", "\\'")}'"
   }
@@ -518,16 +517,13 @@ object TPTP {
     }
     /** Connective as proper term. */
     final case class ConnectiveTerm(conn: Connective) extends Formula {
-      override def pretty: String = conn match {
-        case _: VararyConnective => conn.pretty
-        case _ => s"(${conn.pretty})"
-      }
+      override def pretty: String = s"(${conn.pretty})"
       override def symbols: Set[String] = Set.empty
     }
     /** Non-classical formula as per recent TPTP NHF standard. The connective is n-ary with arbitrary n, see the
      * TPTP documentation which connective names have pre-defined meaning.
      * When used with short connectives ([.], <.>, /.\) it will print as unary connective (without @ sign). */
-    final case class NonclassicalPolyaryFormula(connective: VararyConnective, args: Seq[Formula]) extends Formula {
+    final case class NonclassicalPolyaryFormula(connective: VararyNonclassicalOperator, args: Seq[Formula]) extends Formula {
       override def pretty: String = connective match {
         case NonclassicalLongOperator(_, _, _) => s"(${connective.pretty} @ ${args.map(_.pretty).mkString(" @ ")})"
         // In the following case (box/dia/cone shortform) args should just contain one element, so the mkstring(.)-call is arbitrary.
@@ -595,8 +591,11 @@ object TPTP {
     /** Sum type constructor (type as term) */
     final case object SumTyConstructor extends BinaryConnective { override def pretty: String = "+" }
 
-    sealed abstract class VararyConnective extends Connective
-    final case class NonclassicalLongOperator(name: String, index: Option[Formula], parameters: Seq[(Formula, Formula)]) extends VararyConnective {
+    sealed abstract class VararyNonclassicalOperator {
+      /** Returns a TPTP-compliant serialization of the connective. */
+      def pretty: String
+    }
+    final case class NonclassicalLongOperator(name: String, index: Option[Formula], parameters: Seq[(Formula, Formula)]) extends VararyNonclassicalOperator {
       override def pretty: String = {
         val indexPretty: Seq[String] = index.fold(Seq[String]())(idx => Seq(s"#${idx.pretty}"))
         val parametersPretty: Seq[String] = parameters.map { case (k,v) => s"${k.pretty} := ${v.pretty}"}
@@ -605,15 +604,15 @@ object TPTP {
         else s"{$name(${prettyAll.mkString(",")})}"
       }
     }
-    final case class NonclassicalBox(index: Option[Formula]) extends VararyConnective {
+    final case class NonclassicalBox(index: Option[Formula]) extends VararyNonclassicalOperator {
       /** If there is an index, it will print as `{$box(#idx)}` because [#idx] is not TPTP-complaint (anymore). */
       override def pretty: String = if (index.isEmpty) s"[.]" else s"{$$box(#${index.get.pretty})}"
     }
-    final case class NonclassicalDiamond(index: Option[Formula]) extends VararyConnective {
+    final case class NonclassicalDiamond(index: Option[Formula]) extends VararyNonclassicalOperator {
       /** If there is an index, it will print as `{$dia(#idx)}` because <#idx> is not TPTP-complaint (anymore). */
       override def pretty: String = if (index.isEmpty) s"<.>" else s"{$$dia(#${index.get.pretty})}"
     }
-    final case class NonclassicalCone(index: Option[Formula]) extends VararyConnective {
+    final case class NonclassicalCone(index: Option[Formula]) extends VararyNonclassicalOperator {
       /** If there is an index, it will print as `{$cone(#idx)}` because /#idx\ is not TPTP-complaint (anymore). */
       override def pretty: String = if (index.isEmpty) s"/.\\" else s"{$$cone(#${index.get.pretty})}"
     }
@@ -771,7 +770,7 @@ object TPTP {
     }
     /** Non-classical formula as per recent TPTP NHF standard. The connective is n-ary with arbitrary n, see the
      * TPTP documentation which connective names have pre-defined meaning. */
-    final case class NonclassicalPolyaryFormula(connective: VararyConnective, args: Seq[Formula]) extends Formula {
+    final case class NonclassicalPolyaryFormula(connective: VararyNonclassicalOperator, args: Seq[Formula]) extends Formula {
       override def pretty: String = s"(${connective.pretty}(${args.map(_.pretty).mkString(",")}))" // The long form conncetive adds a '@' itself
       override def symbols: Set[String] = args.flatMap(_.symbols).toSet
     }
@@ -903,8 +902,11 @@ object TPTP {
       def pretty: String
     }
 
-    sealed abstract class VararyConnective extends Connective
-    final case class NonclassicalLongOperator(name: String, index: Option[Term], parameters: Seq[(Term, Term)]) extends VararyConnective {
+    sealed abstract class VararyNonclassicalOperator {
+      /** Returns a TPTP-compliant serialization of the connective. */
+      def pretty: String
+    }
+    final case class NonclassicalLongOperator(name: String, index: Option[Term], parameters: Seq[(Term, Term)]) extends VararyNonclassicalOperator {
       override def pretty: String = {
         val indexPretty: Seq[String] = index.fold(Seq[String]())(idx => Seq(s"#${idx.pretty}"))
         val parametersPretty: Seq[String] = parameters.map { case (k, v) => s"${k.pretty} := ${v.pretty}" }
@@ -913,15 +915,15 @@ object TPTP {
         else s"{$name(${prettyAll.mkString(",")})} @ "
       }
     }
-    final case class NonclassicalBox(index: Option[Term]) extends VararyConnective {
+    final case class NonclassicalBox(index: Option[Term]) extends VararyNonclassicalOperator {
       override def pretty: String = if (index.isEmpty) s"[.]" else s"{$$box(#${index.get.pretty})} @ "
       // Short form with index is not TPTP compliant anymore, so pretty print it as long form
     }
-    final case class NonclassicalDiamond(index: Option[Term]) extends VararyConnective {
+    final case class NonclassicalDiamond(index: Option[Term]) extends VararyNonclassicalOperator {
       override def pretty: String = if (index.isEmpty) s"<.>" else s"{$$dia(#${index.get.pretty})} @ "
       // Short form with index is not TPTP compliant anymore, so pretty print it as long form
     }
-    final case class NonclassicalCone(index: Option[Term]) extends VararyConnective {
+    final case class NonclassicalCone(index: Option[Term]) extends VararyNonclassicalOperator {
       override def pretty: String = if (index.isEmpty) s"/.\\" else s"{$$cone(#${index.get.pretty})} @ "
     }
 
