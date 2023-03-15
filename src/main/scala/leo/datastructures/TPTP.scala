@@ -598,7 +598,7 @@ object TPTP {
     sealed abstract class VararyConnective extends Connective
     final case class NonclassicalLongOperator(name: String, index: Option[Formula], parameters: Seq[(Formula, Formula)]) extends VararyConnective {
       override def pretty: String = {
-        val indexPretty: Seq[String] = index.fold(Seq.empty)(idx => Seq(s"#${idx.pretty}"))
+        val indexPretty: Seq[String] = index.fold(Seq[String]())(idx => Seq(s"#${idx.pretty}"))
         val parametersPretty: Seq[String] = parameters.map { case (k,v) => s"${k.pretty} := ${v.pretty}"}
         val prettyAll = indexPretty.concat(parametersPretty)
         if (prettyAll.isEmpty) s"{$name}"
@@ -906,7 +906,7 @@ object TPTP {
     sealed abstract class VararyConnective extends Connective
     final case class NonclassicalLongOperator(name: String, index: Option[Term], parameters: Seq[(Term, Term)]) extends VararyConnective {
       override def pretty: String = {
-        val indexPretty: Seq[String] = index.fold(Seq.empty)(idx => Seq(s"#${idx.pretty}"))
+        val indexPretty: Seq[String] = index.fold(Seq[String]())(idx => Seq(s"#${idx.pretty}"))
         val parametersPretty: Seq[String] = parameters.map { case (k, v) => s"${k.pretty} := ${v.pretty}" }
         val prettyAll = indexPretty.concat(parametersPretty)
         if (prettyAll.isEmpty) s"{$name} @ "
