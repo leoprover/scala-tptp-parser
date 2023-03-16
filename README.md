@@ -6,13 +6,14 @@ Scala TPTP parser
 The package contains a data structure for the abstract syntax tree (AST) of the parsed input as well as the parser for the different language of the TPTP, see http://tptp.org for details. In particular, the parser supports:
 
   * THF (TH0/TH1): Monomorphic and polymorphic higher-order logic,
-  * TFF (TF0/TF1): Monomorphic and polymorphic typed first-order logic, including extended TFF (TFX),
+  * TFF (TF0/TF1): Monomorphic and polymorphic typed first-order logic, including extended TFF (TXF, formerly called TFX),
   * FOF: Untyped first-order logic,
   * TCF: Typed clause-normal form,
-  * CNF: (Untyped) clause-normal form, and
-  * TPI: TPTP Process Instruction language.
+  * CNF: (Untyped) clause-normal form,
+  * TPI: TPTP Process Instruction language, and
+  * NXF/NHF: the new (partly experimental) non-classical TPTP languages based on TXF resp. THF. 
 
-The parser was originally aimed at at v7.5.0.0 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html); but it's
+The parser was originally developed for v7.5.0.0 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html); but it's
 constantly being updated to follow more recent developments.
 
 `scala-tptp-parser` may be referenced using [![DOI](https://zenodo.org/badge/328686203.svg)](https://zenodo.org/badge/latestdoi/328686203)
@@ -21,7 +22,7 @@ constantly being updated to follow more recent developments.
 ## Install
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.leoprover/scala-tptp-parser_2.13.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.leoprover%22%20AND%20a:%22scala-tptp-parser_2.13%22)
 
-The Scala TPTP parser is available on [Maven Central](https://search.maven.org/artifact/io.github.leoprover/scala-tptp-parser_2.13) (current version: 1.6.5).
+The Scala TPTP parser is available on [Maven Central](https://search.maven.org/artifact/io.github.leoprover/scala-tptp-parser_2.13) (current version: 1.7.0).
 Snapshots are available on [Sonatype](https://s01.oss.sonatype.org/content/repositories/snapshots/io/github/leoprover/scala-tptp-parser_2.13/).
 
 ### Maven
@@ -31,7 +32,7 @@ In order to include `scala-tptp-parser` into your project via Maven, just add th
 <dependency>
   <groupId>io.github.leoprover</groupId>
   <artifactId>scala-tptp-parser_2.13</artifactId>
-  <version>1.6.5</version>
+  <version>1.7.0</version>
 </dependency>
 ```
 
@@ -39,7 +40,7 @@ In order to include `scala-tptp-parser` into your project via Maven, just add th
 
 In order to include `scala-tptp-parser` into your project via SBT, just add the following dependency to your `build.sbt`:
 ```scala
-libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.6.5"
+libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.7.0"
 ```
 
 ### Non-sbt-projects
@@ -81,6 +82,7 @@ try {
    case THF.ConnectiveTerm(conn) => // ...
    case THF.DistinctObject(name) => // ...
    case THF.NumberTerm(value) => // ...
+   case THF.NonclassicalPolyaryFormula(connective, args) => // ...
  }
  // ...
 } catch {
@@ -90,6 +92,8 @@ try {
 
 ## Version history
 
+  - 1.7.0: Rework non-classical formulas in TFF and THF, so that both languages now have their dedicated case class for non-classical formulas, called `NonclassicalPolyaryFormula`. This breaks a few things from previous versions (new formula structure for NCL formulas).
+           Also, the NCL short-form connectives `[.]` and `<.>` are now unary connectives (and can be used as such). The long-form connectives `{name}` still require an explicit application with `@`.
   - 1.6.5: Fix usage of single-quoted identifiers that start with $ (or $$). Now the single quotes are retained in the functor name (in the AST) if the name is not a TPTP lower word. So the functor with name (as string) "$true" is not equal to "'$true'", as it should be (note the single quotes in the second variant). Single quotes are stripped automatically, if they are not necessary (i.e., parsing "'abc'" will produce functor "abc" without single quotes). 
   - 1.6.4: Fix TFF NCL pretty printing: Include introduced `@` signs introduced by 1.6.3.
   - 1.6.3: Change first-order NCL syntax according to PAAR paper (introducing @ sign in TFF). Fix pretty printing of NCL operators.
