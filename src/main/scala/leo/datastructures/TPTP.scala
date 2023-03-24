@@ -761,11 +761,11 @@ object TPTP {
       }
       override def symbols: Set[String] = typing.keySet ++ body.symbols
     }
-    final case class Assignment(lhs: AtomicTerm, rhs: Term) extends Formula {
+    final case class Assignment(lhs: Term, rhs: Term) extends Formula {
       override def pretty: String = s"(${lhs.pretty}) := (${rhs.pretty})"
       override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
     }
-    final case class MetaIdentity(lhs: AtomicTerm, rhs: Term) extends Formula {
+    final case class MetaIdentity(lhs: Term, rhs: Term) extends Formula {
       override def pretty: String = s"(${lhs.pretty}) == (${rhs.pretty})"
       override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
     }
