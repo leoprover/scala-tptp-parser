@@ -1472,7 +1472,8 @@ object TPTPParser {
       case DESCRIPTION => THF.@-
       case TYFORALL => THF.!>
       case TYEXISTS => THF.?*
-      case _ => error(Seq(FORALL, EXISTS, LAMBDA, CHOICE, DESCRIPTION, TYFORALL, TYEXISTS), token)
+      case HASH => THF.Epsilon
+      case _ => error(Seq(FORALL, EXISTS, LAMBDA, CHOICE, DESCRIPTION, TYFORALL, TYEXISTS, HASH), token)
     }
 
 
@@ -2324,7 +2325,8 @@ object TPTPParser {
     private[this] def tokenToTFFQuantifier(token: Token): TFF.Quantifier = token._1 match {
       case FORALL => TFF.!
       case EXISTS => TFF.?
-      case _ => error(Seq(FORALL, EXISTS), token)
+      case HASH => TFF.Epsilon
+      case _ => error(Seq(FORALL, EXISTS, HASH), token)
     }
 
 
@@ -2728,7 +2730,7 @@ object TPTPParser {
       case _ => false
     })
     @inline private[this] def isBinaryAssocConnective(tokenType: TokenType): Boolean = tokenType == AND || tokenType == OR
-    @inline private[this] def isQuantifier(tokenType: TokenType): Boolean = tokenType == FORALL || tokenType == EXISTS
+    @inline private[this] def isQuantifier(tokenType: TokenType): Boolean = tokenType == FORALL || tokenType == EXISTS || tokenType == HASH
     @inline private[this] def isEqualityLikeConnective(tokenType: TokenType): Boolean = tokenType == EQUALS || tokenType == NOTEQUALS
 
     private[this] def tokenToFOFBinaryConnective(token: Token): FOF.BinaryConnective = token._1 match {
@@ -2749,7 +2751,8 @@ object TPTPParser {
     private[this] def tokenToFOFQuantifier(token: Token): FOF.Quantifier = token._1 match {
       case FORALL => FOF.!
       case EXISTS => FOF.?
-      case _ => error(Seq(FORALL, EXISTS), token)
+      case HASH => FOF.Epsilon
+      case _ => error(Seq(FORALL, EXISTS, HASH), token)
     }
 
     private[this] def untypedAtom(): String = {

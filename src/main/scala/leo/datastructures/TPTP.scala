@@ -636,6 +636,8 @@ object TPTP {
     final case object !> extends Quantifier { override def pretty: String = "!>" } // type forall
     /** Existential type quantifier (type-as-term, as binder) */
     final case object ?* extends Quantifier { override def pretty: String = "?*" } // type exists
+    /** Existential type quantifier (type-as-term, as binder) */    /** epsilon binder (introduced in TPTP language v9.0.0.1) */
+    final case object Epsilon extends Quantifier { override def pretty: String = "#" } // epsilon
 
     /** Special kind of interpreted TPTP constants that do not start with a dollar sign.
      * Used in TH1 for polymorphic constant symbols that correspond to quantification, equality, etc. */
@@ -965,6 +967,8 @@ object TPTP {
     final case object ! extends Quantifier { override def pretty: String = "!" }
     /** Existential quantification */
     final case object ? extends Quantifier { override def pretty: String = "?" }
+    /** epsilon binder (introduced in TPTP language v9.0.0.1) */
+    final case object Epsilon extends Quantifier { override def pretty: String = "#" } // epsilon
 
     sealed abstract class Type {
       /** Returns a set of symbols (except variables) occurring in the type. */
@@ -1173,6 +1177,8 @@ object TPTP {
     }
     final case object ! extends Quantifier { override def pretty: String = "!" } // All
     final case object ? extends Quantifier { override def pretty: String = "?" } // Exists
+    /** epsilon binder (introduced in TPTP language v9.0.0.1) */
+    final case object Epsilon extends Quantifier { override def pretty: String = "#" } // epsilon
   }
 
   ////////////////////////////////////////////////////////////////////////
