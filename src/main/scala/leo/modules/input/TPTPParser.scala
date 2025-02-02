@@ -869,6 +869,7 @@ object TPTPParser {
      */
     def annotatedTHF(): THFAnnotated = {
       m(a(LOWERWORD), "thf")
+      val origin = (lastTok._3, lastTok._4)
       a(LPAREN)
       val n = name()
       a(COMMA)
@@ -887,8 +888,8 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) THFAnnotated(n, r, f, None)
-      else THFAnnotated(n, r, f, Some((source, Option(info))))
+      if (source == null) THFAnnotated(n, r, f, None, Some(origin))
+      else THFAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
     }
 
     private[this] def thfFormula(): THF.Statement = {
@@ -1496,6 +1497,7 @@ object TPTPParser {
      */
     def annotatedTFF(tfx: Boolean): TFFAnnotated = {
       m(a(LOWERWORD), "tff")
+      val origin = (lastTok._3, lastTok._4)
       a(LPAREN)
       val n = name()
       a(COMMA)
@@ -1514,8 +1516,8 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) TFFAnnotated(n, r, f, None)
-      else TFFAnnotated(n, r, f, Some((source, Option(info))))
+      if (source == null) TFFAnnotated(n, r, f, None, Some(origin))
+      else TFFAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
     }
 
     def tffFormula(tfx: Boolean): TFF.Statement = {
@@ -2344,6 +2346,7 @@ object TPTPParser {
      */
     def annotatedFOF(): FOFAnnotated = {
       m(a(LOWERWORD), "fof")
+      val origin = (lastTok._3, lastTok._4)
       a(LPAREN)
       val n = name()
       a(COMMA)
@@ -2362,8 +2365,8 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) FOFAnnotated(n, r, f, None)
-      else FOFAnnotated(n, r, f, Some((source, Option(info))))
+      if (source == null) FOFAnnotated(n, r, f, None, Some(origin))
+      else FOFAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
     }
 
     // Currently, no other kind of statement supported
@@ -2499,6 +2502,7 @@ object TPTPParser {
      */
     def annotatedTCF(): TCFAnnotated = {
       m(a(LOWERWORD), "tcf")
+      val origin = (lastTok._3, lastTok._4)
       a(LPAREN)
       val n = name()
       a(COMMA)
@@ -2517,8 +2521,8 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) TCFAnnotated(n, r, f, None)
-      else TCFAnnotated(n, r, f, Some((source, Option(info))))
+      if (source == null) TCFAnnotated(n, r, f, None, Some(origin))
+      else TCFAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
     }
 
     def tcfFormula(): TCF.Statement = {
@@ -2569,6 +2573,7 @@ object TPTPParser {
      */
     def annotatedCNF(): CNFAnnotated = {
       m(a(LOWERWORD), "cnf")
+      val origin = (lastTok._3, lastTok._4)
       a(LPAREN)
       val n = name()
       a(COMMA)
@@ -2587,8 +2592,8 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) CNFAnnotated(n, r, f, None)
-      else CNFAnnotated(n, r, f, Some((source, Option(info))))
+      if (source == null) CNFAnnotated(n, r, f, None, Some(origin))
+      else CNFAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
     }
 
     // Currently, no other kind of statement supported
@@ -2696,6 +2701,7 @@ object TPTPParser {
      */
     def annotatedTPI(): TPIAnnotated = {
       m(a(LOWERWORD), "tpi")
+      val origin = (lastTok._3, lastTok._4)
       a(LPAREN)
       val n = name()
       a(COMMA)
@@ -2714,8 +2720,8 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) TPIAnnotated(n, r, f, None)
-      else TPIAnnotated(n, r, f, Some((source, Option(info))))
+      if (source == null) TPIAnnotated(n, r, f, None, Some(origin))
+      else TPIAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
     }
 
     ////////////////////////////////////////////////////////////////////////
