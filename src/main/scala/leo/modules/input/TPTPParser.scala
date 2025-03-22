@@ -45,7 +45,7 @@ import scala.io.Source
  * in the [[datastructures.TPTP.Problem]] representation. In particular, they are not parsed recursively.
  * This has to be implemented externally (e.g., by recursive calls to the parser).
  *
- * Parsing errors will cause [[TPTPParser.TPTPParseException]]s.
+ * Parsing errors will cause [[TPTPParseException]]s.
  *
  * @author Alexander Steen
  * @see Original TPTP syntax definition at [[http://tptp.org/TPTP/SyntaxBNF.html]].
@@ -61,6 +61,15 @@ object TPTPParser {
   import datastructures.TPTP.FOF.{Formula => FOFFormula}
   import datastructures.TPTP.CNF.{Formula => CNFFormula}
   import datastructures.TPTP.TCF.{Formula => TCFFormula}
+
+  /**
+   * Type of meta information stored in [[AnnotatedFormula.meta]] via key [[META_ORIGIN]].
+   */
+  type META_ORIGIN_TYPE = (Int, Int)
+  /**
+   * Key in [[AnnotatedFormula.meta]] for origin information of the formula.
+   */
+  final val META_ORIGIN: String = "origin"
 
   /**
     * Main exception thrown by the [[leo.modules.input.TPTPParser]] if some parsing error occurs.
@@ -711,7 +720,7 @@ object TPTPParser {
     }
   }
   object TPTPLexer {
-    type TPTPLexerToken = (TPTPLexerTokenType, String, LineNo, Offset) // Cast Any to whatever it should be
+    type TPTPLexerToken = (TPTPLexerTokenType, String, LineNo, Offset)
     type TPTPLexerTokenType = TPTPLexerTokenType.TPTPLexerTokenType
     type LineNo = Int
     type Offset = Int
@@ -888,8 +897,9 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) THFAnnotated(n, r, f, None, Some(origin))
-      else THFAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
+      val result = if (source == null) THFAnnotated(n, r, f, None) else THFAnnotated(n, r, f, Some((source, Option(info))))
+      result.meta.addOne(META_ORIGIN -> origin)
+      result
     }
 
     private[this] def thfFormula(): THF.Statement = {
@@ -1516,8 +1526,9 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) TFFAnnotated(n, r, f, None, Some(origin))
-      else TFFAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
+      val result = if (source == null) TFFAnnotated(n, r, f, None)  else TFFAnnotated(n, r, f, Some((source, Option(info))))
+      result.meta.addOne(META_ORIGIN -> origin)
+      result
     }
 
     def tffFormula(tfx: Boolean): TFF.Statement = {
@@ -2365,8 +2376,9 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) FOFAnnotated(n, r, f, None, Some(origin))
-      else FOFAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
+      val result = if (source == null) FOFAnnotated(n, r, f, None) else FOFAnnotated(n, r, f, Some((source, Option(info))))
+      result.meta.addOne(META_ORIGIN -> origin)
+      result
     }
 
     // Currently, no other kind of statement supported
@@ -2521,8 +2533,9 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) TCFAnnotated(n, r, f, None, Some(origin))
-      else TCFAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
+      val result = if (source == null) TCFAnnotated(n, r, f, None) else TCFAnnotated(n, r, f, Some((source, Option(info))))
+      result.meta.addOne(META_ORIGIN -> origin)
+      result
     }
 
     def tcfFormula(): TCF.Statement = {
@@ -2592,8 +2605,9 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) CNFAnnotated(n, r, f, None, Some(origin))
-      else CNFAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
+      val result = if (source == null) CNFAnnotated(n, r, f, None) else CNFAnnotated(n, r, f, Some((source, Option(info))))
+      result.meta.addOne(META_ORIGIN -> origin)
+      result
     }
 
     // Currently, no other kind of statement supported
@@ -2720,8 +2734,9 @@ object TPTPParser {
       }
       a(RPAREN)
       a(DOT)
-      if (source == null) TPIAnnotated(n, r, f, None, Some(origin))
-      else TPIAnnotated(n, r, f, Some((source, Option(info))), Some(origin))
+      val result = if (source == null) TPIAnnotated(n, r, f, None) else TPIAnnotated(n, r, f, Some((source, Option(info))))
+      result.meta.addOne(META_ORIGIN -> origin)
+      result
     }
 
     ////////////////////////////////////////////////////////////////////////
