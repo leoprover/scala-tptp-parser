@@ -22,7 +22,7 @@ constantly being updated to follow more recent developments.
 ## Install
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.leoprover/scala-tptp-parser_2.13.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.leoprover%22%20AND%20a:%22scala-tptp-parser_2.13%22)
 
-The Scala TPTP parser is available on [Maven Central](https://search.maven.org/artifact/io.github.leoprover/scala-tptp-parser_2.13) (current version: 1.7.1).
+The Scala TPTP parser is available on [Maven Central](https://search.maven.org/artifact/io.github.leoprover/scala-tptp-parser_2.13) (current version: 1.7.3).
 Snapshots are available on [Sonatype](https://s01.oss.sonatype.org/content/repositories/snapshots/io/github/leoprover/scala-tptp-parser_2.13/).
 
 ### Maven
@@ -32,7 +32,7 @@ In order to include `scala-tptp-parser` into your project via Maven, just add th
 <dependency>
   <groupId>io.github.leoprover</groupId>
   <artifactId>scala-tptp-parser_2.13</artifactId>
-  <version>1.7.1</version>
+  <version>1.7.3</version>
 </dependency>
 ```
 
@@ -40,7 +40,7 @@ In order to include `scala-tptp-parser` into your project via Maven, just add th
 
 In order to include `scala-tptp-parser` into your project via SBT, just add the following dependency to your `build.sbt`:
 ```scala
-libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.7.1"
+libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.7.3"
 ```
 
 ### Non-sbt-projects
@@ -92,6 +92,8 @@ try {
 
 ## Version history
 
+  - 1.7.3: Rework origin information to more general meta information, and fix usage in AnnotatedFormula (v1.7.2 would break many things).
+  - 1.7.2: Add origin information in the AnnotatedFormula (line in source file).
   - 1.7.1: Allow any TFF terms on the left side of a meta equality (==).
   - 1.7.0: Rework non-classical formulas in TFF and THF, so that both languages now have their dedicated case class for non-classical formulas, called `NonclassicalPolyaryFormula`. This breaks a few things from previous versions (new formula structure for NCL formulas).
            Also, the NCL short-form connectives `[.]` and `<.>` are now unary connectives (and can be used as such). The long-form connectives `{name}` still require an explicit application with `@`.
