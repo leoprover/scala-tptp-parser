@@ -11,10 +11,10 @@ The package contains a data structure for the abstract syntax tree (AST) of the 
   * TCF: Typed clause-normal form,
   * CNF: (Untyped) clause-normal form,
   * TPI: TPTP Process Instruction language, and
-  * NXF/NHF: the new (partly experimental) non-classical TPTP languages based on TXF resp. THF. 
+  * NXF/NHF: the new non-classical TPTP languages [^2] based on TXF resp. THF. 
 
 The parser was originally developed for v7.5.0.0 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html); but it's
-constantly being updated to follow more recent developments.
+constantly being updated to follow more recent developments [^1].
 
 `scala-tptp-parser` may be referenced using [![DOI](https://zenodo.org/badge/328686203.svg)](https://zenodo.org/badge/latestdoi/328686203)
 
@@ -109,3 +109,8 @@ try {
     for adding this feature!
   - 1.5: Support for sub-roles (e.g., `axiom-something` or `conjecture-[strength(0.85)]`). In general, any `<general_term>` may be used as sub-role.
   - 1.4: Support for non-classical TPTP (http://tptp.org/NonClassicalLogic/)
+
+## References
+
+[^1]: Geoff Sutcliffe, Stepping Stones in the TPTP World. IJCAR (1) 2024: 30-50. DOI: https://doi.org/10.1007/978-3-031-63498-7_3
+[^2]: Alexander Steen, Geoff Sutcliffe, TPTP World Infrastructure for Non-classical Logics. PAAR+SC²@IJCAR 2024: 74-90. DOI: https://ceur-ws.org/Vol-3717/paper4.pdf
