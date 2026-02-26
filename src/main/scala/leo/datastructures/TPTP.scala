@@ -98,6 +98,23 @@ object TPTP {
     if (isDollarOrDollarDollarWord(functor)) functor
     else escapeAtomicWord(functor)
   }
+
+  /** A (hopefully) comprehensive list of known dollar words (TPTP interpreted symbols). */
+  final def knownTPTPDollarWords: Seq[String] = Seq("$oType", "$o", "$iType", "$i", "$tType",
+    "$real", "$rat", "$int", "$distinct", "$less", "$lesseq", "$greater", "$greatereq", "$is_int",
+    "$is_rat", "$uminus", "$sum", "$difference", "$product", "$quotient", "$quotient_e",
+    "$quotient_t", "$quotient_f", "$remainder_e", "$remainder_t", "$remainder_f", "$floor",
+    "$ceiling", "$truncate", "$round", "$to_int", "$to_rat", "$to_real", "$box", "$dia",
+    "$necessary", "$possible", "$obligatory", "$permissible", "$knows", "$canKnow", "$believes",
+    "$canBelieve", "$modal", "$alethic_modal", "$deontic_modal", "$epistemic_modal",
+    "$doxastic_modal", "$temporal_instant", "$domains", "$designation", "$terms", "$modalities",
+    "$constant", "$varying", "$cumulative", "$decreasing", "$rigid", "$flexible", "$local",
+    "$global", "$time", "$reflexivity", "$irreflexivity", "$transitivity", "$asymmetry",
+    "$anti_symmetry", "$linearity", "$forward_linearity", "$backward_linearity", "$beginning",
+    "$end", "$no_beginning", "$no_end", "$density", "$forward_discreteness",
+    "$backward_discreteness", "$modal_system_K", "$modal_system_M", "$modal_system_B",
+    "$modal_system_D", "$modal_system_S4", "$modal_system_S5", "$modal_axiom_K", "$modal_axiom_M",
+    "$modal_axiom_B", "$modal_axiom_D", "$modal_axiom_4", "$modal_axiom_5")
   // END //
 
   ////////////////////////////////////////////////////////////////////////
@@ -219,7 +236,7 @@ object TPTP {
      * meta contains a number of entries, including (maybe more to come):
      *
      *   - Line number and offset of the first character of the annotated formula within the file; of type [[(Int, Int)]].
-     *     Key: [[AnnotatedFormula.META_ORIGIN]].
+     *     Key: [[leo.modules.input.TPTPParser.META_ORIGIN]].
      *
      * @return A pair `Some(line number, offset)` if avaiable, `None` otherwise.
      * @note This information is not used for equality comparisons between objects of that type.
