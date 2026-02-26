@@ -20,7 +20,7 @@ lazy val tptpParser = (project in file("."))
                      |
                      | The parser was initially based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html),
                      | but is continuously updated to keep track of TPTP language updates.""".stripMargin,
-    scalaVersion := "2.13.15",
+    scalaVersion := "2.13.18",
     // Version number explicitly removed as this is handled by the release plugin
 
     scmInfo := Some(ScmInfo(
