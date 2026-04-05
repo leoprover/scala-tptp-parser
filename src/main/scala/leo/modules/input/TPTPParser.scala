@@ -57,8 +57,8 @@ object TPTPParser {
   import datastructures.TPTP.{Problem, AnnotatedFormula, THFAnnotated, TFFAnnotated,
     FOFAnnotated, CNFAnnotated, TPIAnnotated, TCFAnnotated}
   import datastructures.TPTP.THF.{Formula => THFFormula}
-  import datastructures.TPTP.TFF.{Formula => TFFFormula}
-  import datastructures.TPTP.FOF.{Formula => FOFFormula}
+  import datastructures.TPTP.TFF.{Formula => TFFFormula, Term => TFFTerm}
+  import datastructures.TPTP.FOF.{Formula => FOFFormula, Term => FOFTerm}
   import datastructures.TPTP.CNF.{Formula => CNFFormula}
   import datastructures.TPTP.TCF.{Formula => TCFFormula}
 
@@ -200,7 +200,7 @@ object TPTPParser {
   /**
     * Parses a plain THF formula (i.e., without annotations) given as String.
     *
-    * @param formula The annotated formula as string.
+    * @param formula The plain formula as string.
     * @return The parsing result as [[THFFormula]] object
     * @throws TPTPParseException If an parsing error occurred.
     */
@@ -213,9 +213,9 @@ object TPTPParser {
   /**
     * Parses a plain TFF formula (i.e., without annotations) given as String.
     *
-    * @param formula The annotated formula as string.
+    * @param formula The plain formula as string.
     * @param tfx If set to `true`, accept TFX formulas as well (default); otherwise exclude TFX inputs.
-    * @return The parsing resultas [[TFFFormula]] object
+    * @return The parsing result as [[TFFFormula]] object
     * @throws TPTPParseException If an parsing error occurred.
     */
   final def tff(formula: String, tfx: Boolean = true): TFFFormula = {
@@ -224,11 +224,26 @@ object TPTPParser {
     parser.EOF()
     result
   }
+
+  /**
+   * Parses a plain TFF formula (i.e., without annotations) given as String.
+   *
+   * @param term The plain term as string.
+   * @param tfx If set to `true`, accept TFX terms as well (default); otherwise exclude TFX inputs.
+   * @return The parsing result as [[TFFTerm]] object
+   * @throws TPTPParseException If an parsing error occurred.
+   */
+  final def tffTerm(term: String, tfx: Boolean = true): TFFTerm = {
+    val parser = parserFromString(term)
+    val result = parser.tffTerm(tfx)
+    parser.EOF()
+    result
+  }
   /**
     * Parses a plain FOF formula (i.e., without annotations) given as String.
     *
-    * @param formula The annotated formula as string.
-    * @return The parsing resultas [[FOFFormula]] object
+    * @param formula The plain formula as string.
+    * @return The parsing result as [[FOFFormula]] object
     * @throws TPTPParseException If an parsing error occurred.
     */
   final def fof(formula: String): FOFFormula = {
@@ -237,11 +252,25 @@ object TPTPParser {
     parser.EOF()
     result
   }
+
+  /**
+   * Parses a plain FOF term (i.e., without annotations) given as String.
+   *
+   * @param term The plain term as string.
+   * @return The parsing result as [[FOFTerm]] object
+   * @throws TPTPParseException If an parsing error occurred.
+   */
+  final def fofTerm(term: String): FOFTerm = {
+    val parser = parserFromString(term)
+    val result = parser.fofTerm()
+    parser.EOF()
+    result
+  }
   /**
    * Parses a plain TCF formula (i.e., without annotations) given as String.
    *
-   * @param formula The annotated formula as string.
-   * @return The parsing resultas [[TCFFormula]] object
+   * @param formula The plain formula as string.
+   * @return The parsing result as [[TCFFormula]] object
    * @throws TPTPParseException If an parsing error occurred.
    */
   final def tcf(formula: String): TCFFormula = {
@@ -253,8 +282,8 @@ object TPTPParser {
   /**
     * Parses a plain CNF formula (i.e., without annotations) given as String.
     *
-    * @param formula The annotated formula as string.
-    * @return The parsing resultas [[CNFFormula]] object
+    * @param formula The plain formula as string.
+    * @return The parsing result as [[CNFFormula]] object
     * @throws TPTPParseException If an parsing error occurred.
     */
   final def cnf(formula: String): CNFFormula = {
