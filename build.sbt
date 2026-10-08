@@ -41,6 +41,6 @@ lazy val tptpParser = (project in file("."))
 
     Compile / doc / scalacOptions ++= Seq(
       "-doc-title", "Scala TPTP parser",
-      "-doc-root-content", (Compile / resourceDirectory).value + "/rootdoc.txt"
+      "-doc-root-content", ((Compile / resourceDirectory).value / "rootdoc.txt").getAbsolutePath
     )
   )
