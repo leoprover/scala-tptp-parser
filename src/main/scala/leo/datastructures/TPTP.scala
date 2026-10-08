@@ -26,11 +26,6 @@ package datastructures
  * @author Alexander Steen
  */
 object TPTP {
-
-  trait Pretty {
-    /** Returns a TPTP-compliant serialization of the formula/term. */
-    def pretty: String
-  }
   /** Representation of TPTP include directives, where the first element in the file to be includes, the
    * second element in a tuple of additional information: A list of identifiers to be imported (empty if everything is imported),
    * and a (possibly empty) list of comments associated to the import. */
@@ -167,8 +162,7 @@ object TPTP {
   final case class Comment(format: Comment.CommentFormat.CommentFormat,
                            commentType: Comment.CommentType.CommentType,
                            content: String) extends Pretty {
-    import leo.datastructures.TPTP.Comment.CommentFormat
-    import leo.datastructures.TPTP.Comment.CommentType
+    import leo.datastructures.TPTP.Comment.{CommentFormat, CommentType}
     def pretty: String = {
       val dollars = commentType match {
         case CommentType.NORMAL => ""

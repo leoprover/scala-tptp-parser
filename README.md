@@ -1,7 +1,7 @@
 Scala TPTP parser 
 ========
 
-`scala-tptp-parser` is a Scala library (for Scala 2.13.x) for parsing the input languages of the [TPTP infrastructure](http://tptp.org).
+`scala-tptp-parser` is a Scala library (for Scala 2.13.X, Scala 3.3.X and Scala 3.9.X) for parsing the input languages of the [TPTP infrastructure](http://tptp.org).
 
 The package contains a data structure for the abstract syntax tree (AST) of the parsed input as well as the parser for the different language of the TPTP, see http://tptp.org for details. In particular, the parser supports:
 
@@ -91,6 +91,7 @@ try {
 
 ## Version history
 
+  - 1.7.5: Allow cross-building for Scala 2 and Scala 3.
   - 1.7.4: Add two more convenience parser methods, so that FOF and TFF terms can be parsed directly from Strings. Formula type `AnnotatedFormula#F`
            is now a subtype of Pretty so that is always has `.pretty` to pretty print formulas.
   - 1.7.3: Rework origin information to more general meta information, and fix usage in AnnotatedFormula (v1.7.2 would break many things).
