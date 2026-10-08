@@ -20,18 +20,18 @@ constantly being updated to follow more recent developments [^1].
 
 
 ## Install
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.leoprover/scala-tptp-parser_2.13.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.leoprover%22%20AND%20a:%22scala-tptp-parser_2.13%22)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.leoprover/scala-tptp-parser_2.13.svg?label=Maven%20Central)](https://central.sonatype.com/search?q=scala-tptp-parser&namespace=io.github.leoprover)
 
-The Scala TPTP parser is available on [Maven Central](https://central.sonatype.com/artifact/io.github.leoprover/scala-tptp-parser_2.13) (current version: 1.7.4).
+The Scala TPTP parser is available on [Maven Central](https://central.sonatype.com/artifact/io.github.leoprover/scala-tptp-parser_2.13).
 
 ### Maven
 
-In order to include `scala-tptp-parser` into your project via Maven, just add the following dependency:
+In order to include `scala-tptp-parser` into your project via Maven, just add the following dependency (shown for Scala 2.13.X, replace "_2.13" with "_3" for Scala 3.X):
 ```xml
 <dependency>
   <groupId>io.github.leoprover</groupId>
   <artifactId>scala-tptp-parser_2.13</artifactId>
-  <version>1.7.4</version>
+  <version>1.7.5</version>
 </dependency>
 ```
 
@@ -39,7 +39,7 @@ In order to include `scala-tptp-parser` into your project via Maven, just add th
 
 In order to include `scala-tptp-parser` into your project via SBT, just add the following dependency to your `build.sbt`:
 ```scala
-libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.7.4"
+libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.7.5"
 ```
 
 ### Non-sbt-projects
