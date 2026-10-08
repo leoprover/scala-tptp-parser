@@ -1,5 +1,9 @@
 /* This file is part of the scala-tptp-parser library. See README.md and LICENSE.txt in root directory for more information. */
 
+
+val scala2 = "2.13.18"
+val scala3   = Seq("3.9.0", "3.3.8")
+
 lazy val tptpParser = (project in file("."))
   .settings(
     organization := "io.github.leoprover",
@@ -20,7 +24,8 @@ lazy val tptpParser = (project in file("."))
                      |
                      | The parser was initially based on v7.4.0.3 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html),
                      | but is continuously updated to keep track of TPTP language updates.""".stripMargin,
-    scalaVersion := "2.13.18",
+    crossScalaVersions := scala3 ++ Seq(scala2),
+    scalaVersion := crossScalaVersions.value.head,
     // Version number explicitly removed as this is handled by the release plugin
 
     scmInfo := Some(ScmInfo(
@@ -37,7 +42,7 @@ lazy val tptpParser = (project in file("."))
     ),
     licenses += "MIT" -> url("https://opensource.org/licenses/MIT"),
 
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % "test",
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.20" % "test",
 
     Compile / doc / scalacOptions ++= Seq(
       "-doc-title", "Scala TPTP parser",
