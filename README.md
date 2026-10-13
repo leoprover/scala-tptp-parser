@@ -16,7 +16,7 @@ The package contains a data structure for the abstract syntax tree (AST) of the 
 The parser was originally developed for v7.5.0.0 of the TPTP syntax BNF (http://tptp.org/TPTP/SyntaxBNF.html); but it's
 constantly being updated to follow more recent developments [^1].
 
-`scala-tptp-parser` may be referenced using [![DOI](https://zenodo.org/badge/328686203.svg)](https://zenodo.org/badge/latestdoi/328686203)
+`scala-tptp-parser` may be referenced using [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4468958-blue?style=flat&link=https%3A%2F%2Fzenodo.org%2Frecords%2F23246298)](https://doi.org/10.5281/zenodo.4468958)   
 
 
 ## Install
