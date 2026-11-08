@@ -835,20 +835,20 @@ object TPTPParser {
       m(a(LOWERWORD), "include")
       a(LPAREN)
       val filename = a(SINGLEQUOTED)._2
-      var fs: Seq[String] = Seq.empty
+      val fs = List.newBuilder[String]
       val fs0 = o(COMMA, null)
       if (fs0 != null) {
         a(LBRACKET)
-        fs = fs :+ name()
+        fs += name()
         while (o(RBRACKET, null) == null) {
           a(COMMA)
-          fs = fs :+ name()
+          fs += name()
         }
         // RBRACKET already consumed
       }
       a(RPAREN)
       a(DOT)
-      (filename, fs)
+      (filename, fs.result())
     }
 
     def comment(): Comment = {
@@ -1170,29 +1170,29 @@ object TPTPParser {
               }
               a(COMMA)
               // bindings
-              var definitions: Seq[(THF.Formula, THF.Formula)] = Seq.empty
+              val definitions = List.newBuilder[(THF.Formula, THF.Formula)]
               if (o(LBRACKET, null) == null) {
                 val leftSide = thfLogicFormula0()
                 a(ASSIGNMENT)
                 val rightSide = thfLogicFormula0()
-                definitions = definitions :+ (leftSide, rightSide)
+                definitions += ((leftSide, rightSide))
               } else {
                 val leftSide = thfLogicFormula0()
                 a(ASSIGNMENT)
                 val rightSide = thfLogicFormula0()
-                definitions = definitions :+ (leftSide, rightSide)
+                definitions += ((leftSide, rightSide))
                 while (o(COMMA, null) != null) {
                   val leftSideN = thfLogicFormula0()
                   a(ASSIGNMENT)
                   val rightSideN = thfLogicFormula0()
-                  definitions = definitions :+ (leftSideN, rightSideN)
+                  definitions += ((leftSideN, rightSideN))
                 }
                 a(RBRACKET)
               }
               a(COMMA)
               val body = thfLogicFormula()
               a(RPAREN)
-              THF.LetTerm(tyMap, definitions, body)
+              THF.LetTerm(tyMap, definitions.result(), body)
             case "$ite" => // We allow $ite both in functional form, i.e., $ite(c,a,b), and in applied form, i.e.,
                            // $ite @ c @ a @ b. The latter is the proper one from the TPTP syntax BNF, the former
                            // is only for convenience.
@@ -1695,29 +1695,29 @@ object TPTPParser {
           }
           a(COMMA)
           // bindings
-          var definitions: Seq[(TFF.Term, TFF.Term)] = Seq.empty
+          val definitions = List.newBuilder[(TFF.Term, TFF.Term)]
           if (o(LBRACKET, null) == null) {
             val leftSide = tffAtomicTerm(tfx)
             a(ASSIGNMENT)
             val rightSide = tffTerm(tfx)
-            definitions = definitions :+ (leftSide, rightSide)
+            definitions += ((leftSide, rightSide))
           } else {
             val leftSide = tffTerm(tfx) // Syntactically any term is legal, although only tuple or atomicTerm makes sense, I think.
             a(ASSIGNMENT)
             val rightSide = tffTerm(tfx)
-            definitions = definitions :+ (leftSide, rightSide)
+            definitions += ((leftSide, rightSide))
             while (o(COMMA, null) != null) {
               val leftSideN = tffTerm(tfx) // Syntactically any term is legal, although only tuple or atomicTerm makes sense, I think.
               a(ASSIGNMENT)
               val rightSideN = tffTerm(tfx)
-              definitions = definitions :+ (leftSideN, rightSideN)
+              definitions += ((leftSideN, rightSideN))
             }
             a(RBRACKET)
           }
           a(COMMA)
           val body = tffTerm(tfx)
           a(RPAREN)
-          TFF.LetFormula(tyMap, definitions, body)
+          TFF.LetFormula(tyMap, definitions.result(), body)
 
         // TFX only
         case DOLLARWORD if tok._2 == "$ite" && tfx =>
@@ -2133,29 +2133,29 @@ object TPTPParser {
           }
           a(COMMA)
           // bindings
-          var definitions: Seq[(TFF.Term, TFF.Term)] = Seq.empty
+          val definitions = List.newBuilder[(TFF.Term, TFF.Term)]
           if (o(LBRACKET, null) == null) {
             val leftSide = tffAtomicTerm(tfx)
             a(ASSIGNMENT)
             val rightSide = tffTerm(tfx)
-            definitions = definitions :+ (leftSide, rightSide)
+            definitions += ((leftSide, rightSide))
           } else {
             val leftSide = tffTerm(tfx) // Syntactically any term is legal, although only tuple or atomicTerm makes sense, I think.
             a(ASSIGNMENT)
             val rightSide = tffTerm(tfx)
-            definitions = definitions :+ (leftSide, rightSide)
+            definitions += ((leftSide, rightSide))
             while (o(COMMA, null) != null) {
               val leftSideN = tffTerm(tfx) // Syntactically any term is legal, although only tuple or atomicTerm makes sense, I think.
               a(ASSIGNMENT)
               val rightSideN = tffTerm(tfx)
-              definitions = definitions :+ (leftSideN, rightSideN)
+              definitions += ((leftSideN, rightSideN))
             }
             a(RBRACKET)
           }
           a(COMMA)
           val body = tffTerm(tfx)
           a(RPAREN)
-          TFF.FormulaTerm(TFF.LetFormula(tyMap, definitions, body))
+          TFF.FormulaTerm(TFF.LetFormula(tyMap, definitions.result(), body))
 
         // TFX only
         case DOLLARWORD if tok._2 == "$ite" && tfx =>
@@ -2273,13 +2273,13 @@ object TPTPParser {
 
     private[this] def tffUnitaryType(): TFF.Type = {
       var leftParenCount = 0
-      var productTypeEntries: Seq[TFF.Type] = Seq.empty
+      val productTypeEntries = List.newBuilder[TFF.Type]
       while (o(LPAREN, null) != null) {
         leftParenCount += 1
       }
       var doneWithLeftSideOrMapping = false
       while (!doneWithLeftSideOrMapping) {
-        productTypeEntries = productTypeEntries :+ tffAtomicType()
+        productTypeEntries += tffAtomicType()
         val tok = peek()
         tok._1 match {
           case RPAREN if leftParenCount > 0 =>
@@ -2291,6 +2291,7 @@ object TPTPParser {
             doneWithLeftSideOrMapping = true
         }
       }
+      val entries = productTypeEntries.result()
       val next = peek()
       next._1 match {
         case RANGLE =>
@@ -2300,8 +2301,8 @@ object TPTPParser {
             a(RPAREN)
             leftParenCount = leftParenCount - 1
           }
-          TFF.MappingType(productTypeEntries, rightType)
-        case _ if productTypeEntries.size == 1 => productTypeEntries.head
+          TFF.MappingType(entries, rightType)
+        case _ if entries.size == 1 => entries.head
         case _ => error2(s"Parse error: Naked product type on top-level; expected mapping type constructor '>' but found '${next._1}'", next)
       }
     }
@@ -2817,19 +2818,19 @@ object TPTPParser {
     }
 
     private[this] def generalList(): Seq[GeneralTerm] = {
-      var result: Seq[GeneralTerm] = Seq.empty
+      val result = List.newBuilder[GeneralTerm]
       a(LBRACKET)
       var endOfList = o(RBRACKET, null)
       while (endOfList == null) {
         val item = generalTerm()
-        result = result :+ item
+        result += item
         endOfList = o(RBRACKET, null)
         if (endOfList == null) {
           a(COMMA)
         }
       }
       // right bracket consumed by o(RBRACKET, null)
-      result
+      result.result()
     }
 
     private[this] def generalTerm(): GeneralTerm = {
@@ -2842,9 +2843,9 @@ object TPTPParser {
         case LBRACKET => // list
           GeneralTerm(Seq.empty, Some(generalList()))
         case _ => // not a list
-          var generalDataList: Seq[GeneralData] = Seq.empty
+          val generalDataList = List.newBuilder[GeneralData]
           var generalTermList: Option[Seq[GeneralTerm]] = None
-          generalDataList = generalDataList :+ generalData()
+          generalDataList += generalData()
           // as long as ':' then repeat all of above
           // if no ':' anymore, DONE. or if list.
           var done = false
@@ -2856,13 +2857,13 @@ object TPTPParser {
                 done = true
               } else {
                 // maybe further
-                generalDataList = generalDataList :+ generalData()
+                generalDataList += generalData()
               }
             } else {
               done = true
             }
           }
-          GeneralTerm(generalDataList, generalTermList)
+          GeneralTerm(generalDataList.result(), generalTermList)
       }
     }
 
@@ -2873,26 +2874,26 @@ object TPTPParser {
           val function = consume()._2
           val t1 = o(LPAREN, null)
           if (t1 != null) {
-            var args: Seq[GeneralTerm] = Seq.empty
-            args = args :+ generalTerm()
+            val args = List.newBuilder[GeneralTerm]
+            args += generalTerm()
             while (o(COMMA, null) != null) {
-              args = args :+ generalTerm()
+              args += generalTerm()
             }
             a(RPAREN)
-            MetaFunctionData(function, args)
+            MetaFunctionData(function, args.result())
           } else MetaFunctionData(function, Seq.empty)
         case SINGLEQUOTED =>
           val function0 = consume()._2
           val function = if (TPTP.isLowerWord(function0)) function0 else s"'$function0'"
           val t1 = o(LPAREN, null)
           if (t1 != null) {
-            var args: Seq[GeneralTerm] = Seq.empty
-            args = args :+ generalTerm()
+            val args = List.newBuilder[GeneralTerm]
+            args += generalTerm()
             while (o(COMMA, null) != null) {
-              args = args :+ generalTerm()
+              args += generalTerm()
             }
             a(RPAREN)
-            MetaFunctionData(function, args)
+            MetaFunctionData(function, args.result())
           } else MetaFunctionData(function, Seq.empty)
         case UPPERWORD => MetaVariable(consume()._2)
         case DOUBLEQUOTED => DistinctObjectData(consume()._2)
