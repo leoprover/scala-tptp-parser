@@ -1,5 +1,6 @@
-package leo.datastructures
+package leo.datastructures.tptp
 
+import leo.datastructures.Pretty
 import leo.datastructures.TPTP._
 
 import scala.collection.mutable

@@ -1,6 +1,7 @@
-package leo.datastructures
+package leo.datastructures.tptp
 
 import leo.datastructures.TPTP._
+
 import scala.collection.mutable
 
 /** Utility object for traversal for different symbol queries. A mask avoids allocating unwanted

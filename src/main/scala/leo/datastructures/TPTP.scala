@@ -3,6 +3,8 @@
 package leo
 package datastructures
 
+import leo.datastructures.tptp.{TPTPPrinter, TPTPSymbols}
+
 /**
  * Collection of TPTP-related data types that are returned by the [[leo.modules.input.TPTPParser]].
  * An overview:
