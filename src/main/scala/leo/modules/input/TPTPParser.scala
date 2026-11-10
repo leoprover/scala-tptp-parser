@@ -101,6 +101,44 @@ object TPTPParser {
     */
   @inline final def problem(input: String): Problem = problem(io.Source.fromString(input))
 
+  /** Lazily parses top-level formulas, includes, and comments.
+    * Creating the iterator does not read input. `next()` parses one entry;
+    * `hasNext` may consume whitespace and comments ignored by the lexer, but
+    * does not parse the next entry. Parse errors may occur during iteration.
+    * 
+    * 
+    *
+    * Comments recognized by the lexer are emitted as separate CommentEntry values,
+    * including trailing comments.
+    * 
+    * 
+    *
+    * 
+    * The iterator does not close the source. Not thread-safe;
+    * after a parsing error, discard the iterator.
+    */
+  final def entries(input: Source): Iterator[datastructures.TPTP.TopLevelEntry] =
+    new TPTPParser(new TPTPLexer(input)).tptpEntries()
+
+  /** String-input convenience overload of `entries(Source)`.
+    * Attention is advised when using with large inputs.
+    * 
+    */
+  final def entries(input: String): Iterator[datastructures.TPTP.TopLevelEntry] =
+    entries(io.Source.fromString(input))
+
+  /** Parses and delivers one entry at a time, using the same specification as `entries(Source)`.
+    * Runs synchronously to exhaustion. Parse errors
+    * and callback exceptions propagate immediately; no later entries are parsed.
+    * 
+    */
+  final def foreachEntry(input: Source)(consume: datastructures.TPTP.TopLevelEntry => Unit): Unit =
+    entries(input).foreach(consume)
+
+  /** String-input convenience overload of `foreachEntry(Source)`. */
+  final def foreachEntry(input: String)(consume: datastructures.TPTP.TopLevelEntry => Unit): Unit =
+    entries(input).foreach(consume)
+
   /**
     * Parses an TPTP annotated formula given as String.
     * Any kind of annotated formula can be passed to the function (THF/TFF/FOF/CNF/TPI),
@@ -797,38 +835,47 @@ object TPTPParser {
     ////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////
 
-    def tptpFile(): Problem = {
-      if (!tokens.hasNext) {
-        // OK, empty file is fine
-        Problem(Vector.empty, Vector.empty, Map.empty)
-      } else {
-        var formulas: Seq[AnnotatedFormula] = Vector.empty
-        var includes: Seq[Include] = Vector.empty
-        val formulaComments: collection.mutable.Map[String, Seq[Comment]] = collection.mutable.Map.empty
-        var current_comments: Seq[Comment] = Vector.empty
-        while (tokens.hasNext) {
-          val t = peek()
-          t._1 match {
-            case LOWERWORD =>
-              t._2 match {
-                case "include" =>
-                  val (file, idents) = include()
-                  includes = includes :+ (file, (idents, current_comments))
-                  current_comments = Vector.empty
-                case "thf" | "tff" | "fof" | "tcf" | "cnf" | "tpi" =>
-                  val formula = annotatedFormula()
-                  formulaComments.addOne((formula.name, current_comments))
-                  formulas = formulas :+ formula
-                  current_comments = Vector.empty
-                case _ => error1(Seq("thf", "tff", "fof", "tcf", "cnf", "tpi", "include"), t)
-              }
-            case COMMENT_BLOCK | COMMENT_LINE | DEFINED_COMMENT_BLOCK | DEFINED_COMMENT_LINE | SYSTEM_COMMENT_BLOCK | SYSTEM_COMMENT_LINE =>
-              current_comments = current_comments :+ comment()
-            case _ => error1(Seq("thf", "tff", "fof", "tcf", "cnf", "tpi", "include"), t)
-          }
+    /** A single-pass stream including this parser's token and position state. */
+    def tptpEntries(): Iterator[TopLevelEntry] = new Iterator[TopLevelEntry] {
+      override def hasNext: Boolean = tokens.hasNext
+
+      override def next(): TopLevelEntry = {
+        if (!hasNext) throw new NoSuchElementException("next on empty TPTP entry iterator")
+        val t = peek()
+        t._1 match {
+          case LOWERWORD =>
+            t._2 match {
+              case "include" =>
+                val (filename, selection) = include()
+                IncludeEntry(filename, selection)
+              case "thf" | "tff" | "fof" | "tcf" | "cnf" | "tpi" =>
+                FormulaEntry(annotatedFormula())
+              case _ => error1(Seq("thf", "tff", "fof", "tcf", "cnf", "tpi", "include"), t)
+            }
+          case COMMENT_BLOCK | COMMENT_LINE | DEFINED_COMMENT_BLOCK | DEFINED_COMMENT_LINE | SYSTEM_COMMENT_BLOCK | SYSTEM_COMMENT_LINE =>
+            CommentEntry(comment())
+          case _ => error1(Seq("thf", "tff", "fof", "tcf", "cnf", "tpi", "include"), t)
         }
-        Problem(includes, formulas, formulaComments.toMap)
       }
+    }
+
+    def tptpFile(): Problem = {
+      val formulas = Vector.newBuilder[AnnotatedFormula]
+      val includes = Vector.newBuilder[Include]
+      val formulaComments: collection.mutable.Map[String, Seq[Comment]] = collection.mutable.Map.empty
+      var currentComments: Seq[Comment] = Vector.empty
+      tptpEntries().foreach {
+        case IncludeEntry(filename, selection) =>
+          includes += ((filename, (selection, currentComments)))
+          currentComments = Vector.empty
+        case FormulaEntry(formula) =>
+          formulaComments.addOne((formula.name, currentComments))
+          formulas += formula
+          currentComments = Vector.empty
+        case CommentEntry(comment) => currentComments = currentComments :+ comment
+      }
+      
+      Problem(includes.result(), formulas.result(), formulaComments.toMap)
     }
 
     def include(): (String, Seq[String]) = {

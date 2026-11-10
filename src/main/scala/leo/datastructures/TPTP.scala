@@ -123,6 +123,15 @@ object TPTP {
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
 
+  /** `TopLevelEntry` formalizes entry lines in TPTP problems,
+   * either formulas, includes or comments. 
+   * Used by the incremental parsing in `entries` resp. `foreachEntry`.
+   */
+  sealed trait TopLevelEntry
+  final case class FormulaEntry(formula: AnnotatedFormula) extends TopLevelEntry
+  final case class IncludeEntry(filename: String, selection: Seq[String]) extends TopLevelEntry
+  final case class CommentEntry(comment: Comment) extends TopLevelEntry
+
   /** The representation of whole TPTP problems, consisting of:
    *  - include statements (imports of axiom files etc.),
    *  - annotated formulas (axioms, conjectures, type declarations, etc.), and
