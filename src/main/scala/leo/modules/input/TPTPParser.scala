@@ -342,7 +342,9 @@ object TPTPParser {
     private[this] final lazy val iter = input.buffered
     private[this] var curLine: Int = 1
     private[this] var curOffset: Int = 1
-    private[this] var lookahead: Seq[TPTPLexer.TPTPLexerToken] = Vector.empty
+    // Reuse the queue storage across peeks/consumes; ArrayDeque clears removed slots.
+    //
+    private[this] val lookahead = collection.mutable.ArrayDeque.empty[TPTPLexer.TPTPLexerToken]
 
     @inline private[this] def line(): Unit = { curLine += 1; curOffset = 1 }
     @inline private[this] def step(): Unit = { curOffset += 1 }
@@ -403,7 +405,7 @@ object TPTPParser {
           hasNext0
         } else {
           // Because of the NCL short form /.\ and /#something\ there can be an expression (other than a comment) starting with '/'
-          lookahead = lookahead :+ tok(TPTPLexer.TPTPLexerTokenType.SLASH, 1)
+          lookahead.append(tok(TPTPLexer.TPTPLexerTokenType.SLASH, 1))
           true
         }
       }
@@ -419,13 +421,9 @@ object TPTPParser {
     }
 
     override def next(): TPTPLexer.TPTPLexerToken = {
-      if (lookahead.isEmpty) {
-        getNextToken
-      } else {
-        val result = lookahead.head
-        lookahead = lookahead.tail
-        result
-      }
+      if (!hasNext) throw new NoSuchElementException("next on empty TPTP token stream")
+      if (lookahead.nonEmpty) lookahead.removeHead()
+      else getNextToken
     }
 
     override def head: TPTPLexer.TPTPLexerToken = peek()
@@ -436,30 +434,22 @@ object TPTPParser {
       else res
     }
     def safePeek(i: Int): TPTPLexer.TPTPLexerToken = {
-      val i0 = i+1
-      if (lookahead.length >= i0) lookahead(i)
-      else {
-        if(safeExpandLookahead(i0 - lookahead.length)) lookahead(i)
-        else null
+      require(i >= 0, "lookahead index must be non-negative")
+      while (lookahead.length <= i) {
+        val previousLength = lookahead.length
+        // hasNext0 can itself enqueue a slash when distinguishing inline comments
+        // from non-classical operators. Do not scan past that newly queued token.
+        if (!hasNext0) return null
+        if (lookahead.length == previousLength) lookahead.append(getNextToken)
       }
-    }
-
-    @tailrec
-    private[this] def safeExpandLookahead(n: Int): Boolean = {
-      if (n > 0) {
-        if (hasNext) {
-          val tok = getNextToken
-          lookahead = lookahead :+ tok
-          safeExpandLookahead(n-1)
-        } else false
-      } else true
+      lookahead(i)
     }
 
     private[this] def getNextToken: TPTPLexer.TPTPLexerToken = {
       import TPTPLexer.TPTPLexerTokenType._
 
-      if (!hasNext0) throw new NoSuchElementException // also to remove ignored input such as comments etc.
-      else {
+      // The caller has already skipped ignored input and handled any queued slash.
+      {
         val ch = consume()
         // BIG switch case over all different possibilities.
         ch match {
