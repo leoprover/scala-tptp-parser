@@ -31,7 +31,7 @@ In order to include `scala-tptp-parser` into your project via Maven, just add th
 <dependency>
   <groupId>io.github.leoprover</groupId>
   <artifactId>scala-tptp-parser_2.13</artifactId>
-  <version>1.7.5</version>
+  <version>1.8.0</version>
 </dependency>
 ```
 
@@ -39,7 +39,7 @@ In order to include `scala-tptp-parser` into your project via Maven, just add th
 
 In order to include `scala-tptp-parser` into your project via SBT, just add the following dependency to your `build.sbt`:
 ```scala
-libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.7.5"
+libraryDependencies += "io.github.leoprover" %% "scala-tptp-parser" % "1.8.0"
 ```
 
 ### Non-sbt-projects
@@ -50,8 +50,14 @@ In order to use the library with a non-sbt project, you can simply compile the l
 See the brief [API documentation](https://www.alexandersteen.de/software/scala-tptp-parser/api/).
 
 ## Usage
-The parser object `TPTPParser` offers several methods for parsing TPTP problems, annotated formulas or simple formulas. The input is transformed into an
-abstract syntax tree (AST) provided at `leo.datastructures.TPTP`. The ASTs are mostly case classes that can be further processed by pattern matching.
+The parser object `TPTPParser` offers several methods for parsing TPTP problems, annotated formulas or simple formulas. The input is transformed into an abstract syntax tree (AST) provided at `leo.datastructures.TPTP`.
+The ASTs are mostly case classes that can be further processed by pattern matching.
+
+### Parsing entire files/Strings
+
+The simplest way of using the parser is to use the various direct parsing methods like `Parser.problem(Source)`,
+`Parser.problem(String)` or `Parser.annotatedFormula(String)` (and many others). When
+processing large files, consider using the methods for [incremental parsing](#incremental-parsing).
 
 A small sample application can be seen below:
 
@@ -89,8 +95,46 @@ try {
 }
 ```
 
+### Incremental parsing
+
+Use `Parser.entries(source)` for a lazy, single-pass iterator, or
+`Parser.foreachEntry(source)(callback)` to process entries synchronously. Both
+also accept a String. This may be a good option when processing large files.
+
+Each entry is one of `TPTP.FormulaEntry(formula)`,
+`TPTP.IncludeEntry(filename, selection)`, or `TPTP.CommentEntry(comment)`.
+
+The iterator API parses the next entry only when `next()` (or variants thereof, like `take(int)`)
+is invoked:
+
+```scala
+import leo.modules.input.{TPTPParser => Parser}
+import leo.datastructures.TPTP._
+import scala.io.Source
+
+val source = Source.fromFile("/path/to/file", "UTF-8")
+try {
+  val formulas = Parser.entries(source).collect { case FormulaEntry(f) => f }
+  // Consume within the try block; take allows stopping early.
+  formulas.take(100).foreach(f => println(f.name))
+} finally source.close()
+```
+
+The callback API also delivers each entry before parsing the next:
+
+```scala
+val source = Source.fromFile("/path/to/file", "UTF-8")
+try Parser.foreachEntry(source) {
+  case FormulaEntry(f) => println(f.name)
+  case IncludeEntry(filename, selection) => println(s"Include: $filename")
+  case CommentEntry(comment) => println(comment.pretty)
+} finally source.close()
+```
+
+
 ## Version history
 
+  - 1.8.0: Add incremental parsing, many performance improvements.
   - 1.7.5: Allow cross-building for Scala 2 and Scala 3.
   - 1.7.4: Add two more convenience parser methods, so that FOF and TFF terms can be parsed directly from Strings. Formula type `AnnotatedFormula#F`
            is now a subtype of Pretty so that is always has `.pretty` to pretty print formulas.
