@@ -972,7 +972,7 @@ object TPTPParser {
       val idx = peekUnder(LPAREN)
       val tok = peek(idx)
       tok._1 match {
-        case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD if peek(idx+1)._1 == COLON => // Typing
+        case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD | DOUBLEQUOTED if peek(idx+1)._1 == COLON => // Typing
           thfAtomTyping()
         case LBRACKET if peek(idx+1)._1 != DOT && peek(idx+1)._1 != HASH => // tuple or sequent
           /* this is actually a hack that hurts: we validate here, although we should just parse.
@@ -1007,7 +1007,7 @@ object TPTPParser {
         a(RPAREN)
         res
       } else {
-        val constant = untypedAtom()
+        val constant = if (peek()._1 == DOUBLEQUOTED) consume()._2 else untypedAtom()
         a(COLON)
         val typ = thfTopLevelType()
         THF.Typing(constant, typ)
@@ -1607,7 +1607,7 @@ object TPTPParser {
       val idx = peekUnder(LPAREN)
       val tok = peek(idx)
       tok._1 match {
-        case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD if peek(idx+1)._1 == COLON => // Typing
+        case SINGLEQUOTED | LOWERWORD | DOLLARDOLLARWORD | DOUBLEQUOTED if peek(idx+1)._1 == COLON => // Typing
           tffAtomTyping()
         case LBRACKET if tfx && peek(idx+1)._1 != DOT && peek(idx+1)._1 != HASH => // Tuple on formula level, so it's a sequent
           tffSequent()
@@ -1637,7 +1637,7 @@ object TPTPParser {
         a(RPAREN)
         res
       } else {
-        val constant = untypedAtom()
+        val constant = if (peek()._1 == DOUBLEQUOTED) consume()._2 else untypedAtom()
         a(COLON)
         val typ = tffTopLevelType()
         TFF.Typing(constant, typ)

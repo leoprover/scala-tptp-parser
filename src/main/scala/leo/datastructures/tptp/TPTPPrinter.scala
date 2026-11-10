@@ -63,6 +63,12 @@ private[datastructures] object TPTPPrinter {
       out.append('"').append(escapeDistinctObject(name.tail.init)).append('"')
     }
 
+    def typing(name: String, typ: Pretty): Unit = {
+      if (name.startsWith("\"")) distinct(name)
+      else out.append(prettyFunctorString(name))
+      push(text(": "), node(typ))
+    }
+
     def let(typing: Map[String, Pretty], binding: Seq[(Pretty, Pretty)], body: Pretty): Unit = {
       val types = Many(typing.iterator.map { case (n, t) => group(text(escapeAtomicWord(n) + ":"), node(t)) }, ",")
       val bindings = Many(binding.iterator.map { case (l, r) => group(node(l), text(" := "), node(r)) }, ",")
@@ -88,7 +94,7 @@ private[datastructures] object TPTPPrinter {
     // Keep each dialect dispatch below HotSpot's huge-method threshold so the
     // traversal can be JIT compiled even when all dialects are supported.
     def thf(value: Pretty): Unit = value match {
-      case THF.Typing(a, t) => push(text(prettyFunctorString(a) + ": "), node(t))
+      case THF.Typing(a, t) => typing(a, t)
       case THF.Logical(f) => push(node(f))
       case THF.Sequent(l, r) => push(text("["), nodes(l), text("] --> ["), nodes(r), text("]"))
       case THF.FunctionTerm(f, args) => atom(f, args)
@@ -117,7 +123,7 @@ private[datastructures] object TPTPPrinter {
     }
 
     def tff(value: Pretty): Unit = value match {
-      case TFF.Typing(a, t) => push(text(prettyFunctorString(a) + ": "), node(t))
+      case TFF.Typing(a, t) => typing(a, t)
       case TFF.Logical(f) => push(node(f))
       case TFF.Sequent(l, r) => push(text("["), nodes(l), text("] --> ["), nodes(r), text("]"))
       case TFF.AtomicFormula(f, args) => atom(f, args)
