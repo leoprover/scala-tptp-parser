@@ -26,6 +26,23 @@ package datastructures
  * @author Alexander Steen
  */
 object TPTP {
+  /** Syntactic symbol categories, THF expressions are both formulas and terms;
+    */
+  trait Symbolic extends Pretty {
+    /** Serialize this node using the shared iterative printer. */
+    override def pretty: String = TPTPPrinter.render(this)
+
+    /** Predicate symbols; for THF, the same expression symbols as termSymbols. */
+    def formulaSymbols: Set[String] = TPTPSymbols.collect(this, TPTPSymbols.Formula)
+    /** Function/constant symbols and distinct objects, excluding variables/numbers. */
+    def termSymbols: Set[String] = TPTPSymbols.collect(this, TPTPSymbols.Term)
+    /** Type constructors/constants in syntactically identified type positions. */
+    def typeSymbols: Set[String] = TPTPSymbols.collect(this, TPTPSymbols.Type)
+    /** Union of the three categories, computed in one traversal. */
+    @deprecated("Use formulaSymbols, termSymbols, or typeSymbols instead.", "next")
+    def symbols: Set[String] = TPTPSymbols.collect(this, TPTPSymbols.All)
+  }
+
   /** Representation of TPTP include directives, where the first element in the file to be includes, the
    * second element in a tuple of additional information: A list of identifiers to be imported (empty if everything is imported),
    * and a (possibly empty) list of comments associated to the import. */
@@ -77,7 +94,7 @@ object TPTP {
     } else word
   }
 
-  private def escapeDistinctObject(name: String): String = {
+  private[datastructures] def escapeDistinctObject(name: String): String = {
     name.replace("\\", "\\\\").replace("\"", "\\\"")
   }
 
@@ -145,44 +162,14 @@ object TPTP {
                            formulas: Seq[AnnotatedFormula],
                            formulaComments: Map[String, Seq[Comment]]) extends Pretty {
     /** A TPTP-compliant serialization of the problem representation. */
-    def pretty: String = {
-      val sb: StringBuilder = new StringBuilder()
-      includes.foreach { case (filename, (inc, comments)) =>
-        comments.foreach { c => sb.append(c.pretty); sb.append("\n") }
-        if (inc.isEmpty) {
-          sb.append(s"include('$filename').\n")
-        } else {
-          sb.append(s"include('$filename', [${inc.map(s => s"'$s'").mkString(",")}]).\n")
-        }
-      }
-      formulas.foreach { f =>
-        formulaComments.get(f.name) match {
-          case Some(comments) => comments.foreach { c => sb.append(c.pretty); sb.append("\n") }
-          case None => // Nothing
-        }
-        sb.append(f.pretty)
-        sb.append("\n")
-      }
-      if (sb.nonEmpty) sb.init.toString()
-      else sb.toString()
-    }
+    def pretty: String = TPTPPrinter.render(this)
   }
 
   final case class Comment(format: Comment.CommentFormat.CommentFormat,
                            commentType: Comment.CommentType.CommentType,
                            content: String) extends Pretty {
     import leo.datastructures.TPTP.Comment.{CommentFormat, CommentType}
-    def pretty: String = {
-      val dollars = commentType match {
-        case CommentType.NORMAL => ""
-        case CommentType.DEFINED => "$"
-        case CommentType.SYSTEM => "$$"
-      }
-      format match {
-        case CommentFormat.BLOCK => s"/*$dollars$content*/"
-        case CommentFormat.LINE => s"%$dollars$content"
-      }
-    }
+    def pretty: String = TPTPPrinter.render(this)
   }
   object Comment {
     /** An enumeration for the different comment formats:
@@ -217,7 +204,7 @@ object TPTP {
    * the line number/offset of the formula within the file it was read from. See [[AnnotatedFormula.meta]] for details.
    * Equality comparisons between different objects of this type should ignore the [[AnnotatedFormula.meta]] field, i.e.
    * different objects with all fields equal except for `meta` are considered equal. */
-  sealed abstract class AnnotatedFormula extends Pretty{
+  sealed abstract class AnnotatedFormula extends Symbolic {
     import AnnotatedFormula.FormulaType.FormulaType
 
     /** The type of the wrapped formula. */
@@ -232,9 +219,6 @@ object TPTP {
     def annotations: Annotations
     /** The [[AnnotatedFormula.FormulaType]] of the underlying formula. */
     def formulaType: FormulaType
-
-    /** Contains every constant symbol (i.e., no variables) occurring in the formula, including term and type symbols. */
-    def symbols: Set[String]
 
     private val meta0: collection.mutable.Map[String, Any] = collection.mutable.Map.empty
     /**
@@ -269,11 +253,10 @@ object TPTP {
                                 override val role: String,
                                 override val formula: THF.Statement,
                                 override val annotations: Annotations) extends AnnotatedFormula {
+    override def formulaSymbols: Set[String] = termSymbols
     type F = THF.Statement
 
     override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.THF
-    override def pretty: String = prettifyAnnotated("thf", name, role, formula.pretty, annotations)
-    override def symbols: Set[String] = formula.symbols
   }
 
   /** An annotated TFF formula. */
@@ -284,8 +267,6 @@ object TPTP {
     type F = TFF.Statement
 
     override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.TFF
-    override def pretty: String = prettifyAnnotated("tff", name, role, formula.pretty, annotations)
-    override def symbols: Set[String] = formula.symbols
   }
 
   /** An annotated FOF formula. */
@@ -296,8 +277,6 @@ object TPTP {
     type F = FOF.Statement
 
     override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.FOF
-    override def pretty: String = prettifyAnnotated("fof", name, role, formula.pretty, annotations)
-    override def symbols: Set[String] = formula.symbols
   }
 
   /** An annotated TCF formula. */
@@ -308,8 +287,6 @@ object TPTP {
     type F = TCF.Statement
 
     override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.TCF
-    override def pretty: String = prettifyAnnotated("tcf", name, role, formula.pretty, annotations)
-    override def symbols: Set[String] = formula.symbols
   }
 
   /** An annotated CNF formula. */
@@ -320,8 +297,6 @@ object TPTP {
     type F = CNF.Statement
 
     override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.CNF
-    override def pretty: String = prettifyAnnotated("cnf", name, role, formula.pretty, annotations)
-    override def symbols: Set[String] = formula.symbols
   }
 
   /** An annotated TPI formula. */
@@ -332,16 +307,6 @@ object TPTP {
     type F = FOF.Statement
 
     override def formulaType: AnnotatedFormula.FormulaType.FormulaType = AnnotatedFormula.FormulaType.TPI
-    override def pretty: String = prettifyAnnotated("tpi", name, role, formula.pretty, annotations)
-    override def symbols: Set[String] = formula.symbols
-  }
-
-  @inline private[this] final def prettifyAnnotated(prefix: String, name: String, role: String, formula: String, annotations: Annotations): String = {
-    if (annotations.isEmpty) s"$prefix(${convertStringToName(name)}, $role, $formula)."
-    else {
-      if (annotations.get._2.isEmpty) s"$prefix(${convertStringToName(name)}, $role, $formula, ${annotations.get._1.pretty})."
-      else s"$prefix(${convertStringToName(name)}, $role, $formula, ${annotations.get._1.pretty}, [${annotations.get._2.get.map(_.pretty).mkString(",")}])."
-    }
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -355,38 +320,21 @@ object TPTP {
    * @see [[TPTP.Rational]]
    * @see [[TPTP.Real]]
    */
-  sealed abstract class Number extends Pretty
+  sealed abstract class Number extends Pretty {
+    override def pretty: String = TPTPPrinter.render(this)
+  }
   /** Representation of an integer. */
-  final case class Integer(value: BigInt) extends Number {
-    override def pretty: String = value.toString
-  }
+  final case class Integer(value: BigInt) extends Number
   /** Representation of a rational number p/q where p is `numerator` and q is `denominator`. */
-  final case class Rational(numerator: BigInt, denominator: BigInt) extends Number {
-    override def pretty: String = s"$numerator/$denominator"
-  }
+  final case class Rational(numerator: BigInt, denominator: BigInt) extends Number
   /** Representation of a real number p.q*10^x^ where p is the part before the decimal point (`wholePart`),
    * q is are the decimal places after the point (`decimalPlaces`) and `exponent` in the x. */
-  final case class Real(wholePart: BigInt, decimalPlaces: BigInt, exponent: BigInt) extends Number {
-    override def pretty: String = if (exponent == 1) s"$wholePart.$decimalPlaces"
-                                  else s"$wholePart.${decimalPlaces}E$exponent"
-  }
+  final case class Real(wholePart: BigInt, decimalPlaces: BigInt, exponent: BigInt) extends Number
 
   /** Returns a TPTP-compliant serialization of the "general_term" (cf. TPTP syntax BNF). */
   final case class GeneralTerm(data: Seq[GeneralData],
                                list: Option[Seq[GeneralTerm]]) extends Pretty {
-    def pretty: String = {
-      val sb: StringBuilder = new StringBuilder()
-      if (data.nonEmpty) {
-        sb.append(data.map(_.pretty).mkString(":"))
-      }
-      if (list.isDefined) {
-        if(data.nonEmpty) sb.append(":")
-        sb.append("[")
-        sb.append(list.get.map(_.pretty).mkString(","))
-        sb.append("]")
-      }
-      sb.toString()
-    }
+    def pretty: String = TPTPPrinter.render(this)
   }
 
   /** General formula annotation data. Can be one of the following:
@@ -399,50 +347,28 @@ object TPTP {
     *   @see See [[GeneralTerm]] for some context and
     *        [[http://tptp.org/TPTP/SyntaxBNF.html#general_term]] for a use case.
     */
-  sealed abstract class GeneralData extends Pretty
-  /** @see [[GeneralData]] */
-  final case class MetaFunctionData(f: String, args: Seq[GeneralTerm]) extends GeneralData {
-    override def pretty: String = {
-      val escapedF = prettyFunctorString(f)
-      if (args.isEmpty) escapedF else s"$escapedF(${args.map(_.pretty).mkString(",")})"
-    }
+  sealed abstract class GeneralData extends Pretty {
+    override def pretty: String = TPTPPrinter.render(this)
   }
   /** @see [[GeneralData]] */
-  final case class MetaVariable(variable: String) extends GeneralData {
-    override def pretty: String = variable
-  }
+  final case class MetaFunctionData(f: String, args: Seq[GeneralTerm]) extends GeneralData
   /** @see [[GeneralData]] */
-  final case class NumberData(number: Number) extends GeneralData {
-    override def pretty: String = number.pretty
-  }
+  final case class MetaVariable(variable: String) extends GeneralData
   /** @see [[GeneralData]] */
-  final case class DistinctObjectData(name: String) extends GeneralData {
-    override def pretty: String = {
-      assert(name.startsWith("\"") && name.endsWith("\""), "Distinct object without enclosing double quotes.")
-      s""""${escapeDistinctObject(name.tail.init)}""""
-    }
-  }
+  final case class NumberData(number: Number) extends GeneralData
   /** @see [[GeneralData]] */
-  final case class GeneralFormulaData(data: FormulaData) extends GeneralData {
-    override def pretty: String = data.pretty
-  }
+  final case class DistinctObjectData(name: String) extends GeneralData
+  /** @see [[GeneralData]] */
+  final case class GeneralFormulaData(data: FormulaData) extends GeneralData
 
-  sealed abstract class FormulaData extends Pretty
-  final case class THFData(formula: THF.Statement) extends FormulaData {
-    override def pretty: String = s"$$thf(${formula.pretty})"
+  sealed abstract class FormulaData extends Pretty {
+    override def pretty: String = TPTPPrinter.render(this)
   }
-  final case class TFFData(formula: TFF.Statement) extends FormulaData {
-    override def pretty: String = s"$$tff(${formula.pretty})"
-  }
-  final case class FOFData(formula: FOF.Statement) extends FormulaData {
-    override def pretty: String = s"$$fof(${formula.pretty})"
-  }
-  final case class CNFData(formula: CNF.Statement) extends FormulaData {
-    override def pretty: String = s"$$cnf(${formula.pretty})"
-  }
-  final case class FOTData(formula: FOF.Term) extends FormulaData {
-    override def pretty: String = s"$$fot(${formula.pretty})"
-  }
+  final case class THFData(formula: THF.Statement) extends FormulaData
+  final case class TFFData(formula: TFF.Statement) extends FormulaData
+  final case class FOFData(formula: FOF.Statement) extends FormulaData
+  final case class CNFData(formula: CNF.Statement) extends FormulaData
+  final case class FOTData(formula: FOF.Term) extends FormulaData
 
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
@@ -455,32 +381,18 @@ object TPTP {
     type TypedVariable = (String, Type)
     type Type = Formula
 
-    sealed abstract class Statement extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the formula. */
-      def symbols: Set[String]
+    sealed abstract class Statement extends Symbolic {
+      override def formulaSymbols: Set[String] = termSymbols
     }
-    final case class Typing(atom: String, typ: Type) extends Statement {
-      override def pretty: String = {
-        val prettyName = prettyFunctorString(atom)
-        s"$prettyName: ${typ.pretty}"
-      }
-      override def symbols: Set[String] = typ.symbols + atom
-    }
-    final case class Logical(formula: Formula) extends Statement {
-      override def pretty: String = formula.pretty
-      override def symbols: Set[String] = formula.symbols
-    }
-    final case class Sequent(lhs: Seq[Formula], rhs: Seq[Formula]) extends Statement {
-      override def pretty: String = s"${lhs.map(_.pretty).mkString("[", ",", "]")} --> ${rhs.map(_.pretty).mkString("[", ",", "]")}"
-      override def symbols: Set[String] = lhs.flatMap(_.symbols).toSet union rhs.flatMap(_.symbols).toSet
-    }
+    final case class Typing(atom: String, typ: Type) extends Statement
+    final case class Logical(formula: Formula) extends Statement
+    final case class Sequent(lhs: Seq[Formula], rhs: Seq[Formula]) extends Statement
 
     // Types as terms; for TH1 parsing. That's why we dont have a clean separation between terms and types here.
     // We don't care for well-typedness etc. in parsing. We can parse syntactically correct but completely meaningless
     // and ill-typed inputs. This will be addressed in the interpretation step.
-    sealed abstract class Formula extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the formula. */
-      def symbols: Set[String]
+    sealed abstract class Formula extends Symbolic {
+      override def formulaSymbols: Set[String] = termSymbols
     }
 
     /** Constant symbols `c` or FOF-style functional expressions `f(c)`.
@@ -495,87 +407,29 @@ object TPTP {
      * @see [[TPTP.convertStringToAtomicWord]]
     */
     final case class FunctionTerm(f: String, args: Seq[Formula]) extends Formula  {
-      override def pretty: String = {
-        val prettyF = prettyFunctorString(f)
-        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
-      }
-
-      override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
-
       @inline def isUninterpretedFunction: Boolean = !isDefinedFunction && !isSystemFunction
       @inline def isDefinedFunction: Boolean = f.startsWith("$") && !isSystemFunction
       @inline def isSystemFunction: Boolean = f.startsWith("$$")
       @inline def isConstant: Boolean = args.isEmpty
     }
-    final case class QuantifiedFormula(quantifier: Quantifier, variableList: Seq[TypedVariable], body: Formula) extends Formula {
-      override def pretty: String = s"(${quantifier.pretty} [${variableList.map{case (n,t) => s"$n:${t.pretty}"}.mkString(",")}]: (${body.pretty}))"
-      override def symbols: Set[String] = body.symbols
-    }
+    final case class QuantifiedFormula(quantifier: Quantifier, variableList: Seq[TypedVariable], body: Formula) extends Formula
     /** A TPTP variable. Precondition for creating a Variable object: `name` is uppercase. */
-    final case class Variable(name: String) extends Formula {
-      override def pretty: String = name
-      override def symbols: Set[String] = Set.empty
-    }
-    final case class UnaryFormula(connective: UnaryConnective, body: Formula) extends Formula {
-      override def pretty: String = s"(${connective.pretty} (${body.pretty}))"
-      override def symbols: Set[String] = body.symbols
-    }
-    final case class BinaryFormula(connective: BinaryConnective, left: Formula, right: Formula) extends Formula {
-      override def pretty: String = s"(${left.pretty} ${connective.pretty} ${right.pretty})"
-      override def symbols: Set[String] = left.symbols ++ right.symbols
-    }
-    final case class Tuple(elements: Seq[Formula]) extends Formula {
-      override def pretty: String = s"[${elements.map(_.pretty).mkString(",")}]"
-      override def symbols: Set[String] = elements.flatMap(_.symbols).toSet
-    }
-    final case class ConditionalTerm(condition: Formula, thn: Formula, els: Formula) extends Formula {
-      override def pretty: String = s"$$ite @ ${condition.pretty} @ ${thn.pretty} @ ${els.pretty}"
-      override def symbols: Set[String] = condition.symbols ++ thn.symbols ++ els.symbols
-    }
-    final case class LetTerm(typing: Map[String, Type], binding: Seq[(Formula, Formula)], body: Formula) extends Formula {
-      override def pretty: String = {
-        val typeBinding0 = typing.map(t => s"${escapeAtomicWord(t._1)}:${t._2.pretty}").mkString(",")
-        val typeBinding = if (typing.size == 1) typeBinding0 else s"[$typeBinding0]"
-        val termBinding0 = binding.map(t => s"${t._1.pretty} := ${t._2.pretty}").mkString(",")
-        val termBinding = if (binding.size == 1) termBinding0 else s"[$termBinding0]"
-        s"$$let($typeBinding, $termBinding, ${body.pretty})"
-      }
-      override def symbols: Set[String] = typing.keySet union body.symbols
-    }
-    final case class DefinedTH1ConstantTerm(constant: DefinedTH1Constant) extends Formula {
-      override def pretty: String = constant.pretty
-      override def symbols: Set[String] = Set.empty
-    }
+    final case class Variable(name: String) extends Formula
+    final case class UnaryFormula(connective: UnaryConnective, body: Formula) extends Formula
+    final case class BinaryFormula(connective: BinaryConnective, left: Formula, right: Formula) extends Formula
+    final case class Tuple(elements: Seq[Formula]) extends Formula
+    final case class ConditionalTerm(condition: Formula, thn: Formula, els: Formula) extends Formula
+    final case class LetTerm(typing: Map[String, Type], binding: Seq[(Formula, Formula)], body: Formula) extends Formula
+    final case class DefinedTH1ConstantTerm(constant: DefinedTH1Constant) extends Formula
     /** Connective as proper term. */
-    final case class ConnectiveTerm(conn: Connective) extends Formula {
-      override def pretty: String = s"(${conn.pretty})"
-      override def symbols: Set[String] = Set.empty
-    }
+    final case class ConnectiveTerm(conn: Connective) extends Formula
     /** Non-classical formula as per recent TPTP NHF standard. The connective is n-ary with arbitrary n, see the
      * TPTP documentation which connective names have pre-defined meaning.
      * When used with short connectives ([.], <.>, /.\) it will print as unary connective (without @ sign). */
-    final case class NonclassicalPolyaryFormula(connective: VararyNonclassicalOperator, args: Seq[Formula]) extends Formula {
-      override def pretty: String = connective match {
-        case NonclassicalLongOperator(_, _, _) if args.isEmpty => s"${connective.pretty}"
-        case NonclassicalLongOperator(_, _, _) => s"(${connective.pretty} @ ${args.map(_.pretty).mkString(" @ ")})"
-        // In the following case (box/dia/cone shortform) args should just contain one element, so the mkstring(.)-call is arbitrary.
-        case NonclassicalBox(_) | NonclassicalDiamond(_) | NonclassicalCone(_)  => s"(${connective.pretty} ${args.map(_.pretty).mkString(" ")})"
-      }
-
-      override def symbols: Set[String] = args.flatMap(_.symbols).toSet
-    }
+    final case class NonclassicalPolyaryFormula(connective: VararyNonclassicalOperator, args: Seq[Formula]) extends Formula
     /** An object that is unequal to every DistinctObject with a different name.  */
-    final case class DistinctObject(name: String) extends Formula {
-      override def pretty: String = {
-        assert(name.startsWith("\"") && name.endsWith("\""), "Distinct object without enclosing double quotes.")
-        s""""${escapeDistinctObject(name.tail.init)}""""
-      }
-      override def symbols: Set[String] = Set(name)
-    }
-    final case class NumberTerm(value: Number) extends Formula {
-      override def pretty: String = value.pretty
-      override def symbols: Set[String] = Set.empty
-    }
+    final case class DistinctObject(name: String) extends Formula
+    final case class NumberTerm(value: Number) extends Formula
 
     sealed abstract class Connective extends Pretty
 
@@ -620,28 +474,15 @@ object TPTP {
     /** Sum type constructor (type as term) */
     final case object SumTyConstructor extends BinaryConnective { override def pretty: String = "+" }
 
-    sealed abstract class VararyNonclassicalOperator extends Pretty
-    final case class NonclassicalLongOperator(name: String, index: Option[Formula], parameters: Seq[(Formula, Formula)]) extends VararyNonclassicalOperator {
-      override def pretty: String = {
-        val indexPretty: Seq[String] = index.fold(Seq[String]())(idx => Seq(s"#${idx.pretty}"))
-        val parametersPretty: Seq[String] = parameters.map { case (k,v) => s"${k.pretty} := ${v.pretty}"}
-        val prettyAll = indexPretty.concat(parametersPretty)
-        if (prettyAll.isEmpty) s"{$name}"
-        else s"{$name(${prettyAll.mkString(",")})}"
-      }
+    sealed abstract class VararyNonclassicalOperator extends Pretty {
+      override def pretty: String = TPTPPrinter.render(this)
     }
-    final case class NonclassicalBox(index: Option[Formula]) extends VararyNonclassicalOperator {
-      /** If there is an index, it will print as `{$box(#idx)}` because [#idx] is not TPTP-complaint (anymore). */
-      override def pretty: String = if (index.isEmpty) s"[.]" else s"{$$box(#${index.get.pretty})}"
-    }
-    final case class NonclassicalDiamond(index: Option[Formula]) extends VararyNonclassicalOperator {
-      /** If there is an index, it will print as `{$dia(#idx)}` because <#idx> is not TPTP-complaint (anymore). */
-      override def pretty: String = if (index.isEmpty) s"<.>" else s"{$$dia(#${index.get.pretty})}"
-    }
-    final case class NonclassicalCone(index: Option[Formula]) extends VararyNonclassicalOperator {
-      /** If there is an index, it will print as `{$cone(#idx)}` because /#idx\ is not TPTP-complaint (anymore). */
-      override def pretty: String = if (index.isEmpty) s"/.\\" else s"{$$cone(#${index.get.pretty})}"
-    }
+    final case class NonclassicalLongOperator(name: String,
+                                              index: Option[Formula],
+                                              parameters: Seq[(Formula, Formula)]) extends VararyNonclassicalOperator
+    final case class NonclassicalBox(index: Option[Formula]) extends VararyNonclassicalOperator
+    final case class NonclassicalDiamond(index: Option[Formula]) extends VararyNonclassicalOperator
+    final case class NonclassicalCone(index: Option[Formula]) extends VararyNonclassicalOperator
 
     sealed abstract class Quantifier extends Pretty
     /** Universal quantification (as binder) */
@@ -658,7 +499,7 @@ object TPTP {
     final case object !> extends Quantifier { override def pretty: String = "!>" } // type forall
     /** Existential type quantifier (type-as-term, as binder) */
     final case object ?* extends Quantifier { override def pretty: String = "?*" } // type exists
-    /** Existential type quantifier (type-as-term, as binder) */    /** epsilon binder (introduced in TPTP language v9.0.0.1) */
+    /** epsilon binder (introduced in TPTP language v9.0.0.1) */
     final case object Epsilon extends Quantifier { override def pretty: String = "#" } // epsilon
 
     /** Special kind of interpreted TPTP constants that do not start with a dollar sign.
@@ -694,30 +535,12 @@ object TPTP {
       }
     }
 
-    sealed abstract class Statement extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the formula. */
-      def symbols: Set[String]
-    }
-    final case class Typing(atom: String, typ: Type) extends Statement {
-      override def pretty: String = {
-        val escapedName = prettyFunctorString(atom)
-        s"$escapedName: ${typ.pretty}"
-      }
-      override def symbols: Set[String] = typ.symbols + atom
-    }
-    final case class Logical(formula: Formula) extends Statement {
-      override def pretty: String = formula.pretty
-      override def symbols: Set[String] = formula.symbols
-    }
-    final case class Sequent(lhs: Seq[Term], rhs: Seq[Term]) extends Statement {
-      override def pretty: String = s"${lhs.map(_.pretty).mkString("[", ",", "]")} --> ${rhs.map(_.pretty).mkString("[", ",", "]")}"
-      override def symbols: Set[String] = lhs.flatMap(_.symbols).toSet union rhs.flatMap(_.symbols).toSet
-    }
+    sealed abstract class Statement extends Symbolic
+    final case class Typing(atom: String, typ: Type) extends Statement
+    final case class Logical(formula: Formula) extends Statement
+    final case class Sequent(lhs: Seq[Term], rhs: Seq[Term]) extends Statement
 
-    sealed abstract class Formula extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the formula. */
-      def symbols: Set[String]
-    }
+    sealed abstract class Formula extends Symbolic
     /** Important: `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
      * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
      * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
@@ -728,75 +551,26 @@ object TPTP {
      *
      * @see [[TPTP.convertStringToAtomicWord]] */
     final case class AtomicFormula(f: String, args: Seq[Term]) extends Formula  {
-      override def pretty: String = {
-        val prettyF = prettyFunctorString(f)
-        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
-      }
-      override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
 
       @inline def isUninterpretedFunction: Boolean = !isDefinedFunction && !isSystemFunction
       @inline def isDefinedFunction: Boolean = f.startsWith("$") && !isSystemFunction
       @inline def isSystemFunction: Boolean = f.startsWith("$$")
       @inline def isConstant: Boolean = args.isEmpty
     }
-    final case class QuantifiedFormula(quantifier: Quantifier, variableList: Seq[TypedVariable], body: Formula) extends Formula {
-      override def pretty: String = s"(${quantifier.pretty} [${variableList.map(prettifyTypedVariable).mkString(",")}]: (${body.pretty}))"
-      override def symbols: Set[String] = body.symbols
-    }
-    final case class UnaryFormula(connective: UnaryConnective, body: Formula) extends Formula {
-      override def pretty: String = s"${connective.pretty} (${body.pretty})"
-      override def symbols: Set[String] = body.symbols
-    }
-    final case class BinaryFormula(connective: BinaryConnective, left: Formula, right: Formula) extends Formula {
-      override def pretty: String = s"(${left.pretty} ${connective.pretty} ${right.pretty})"
-      override def symbols: Set[String] = left.symbols ++ right.symbols
-    }
-    final case class Equality(left: Term, right: Term) extends Formula {
-      override def pretty: String = s"(${left.pretty} = ${right.pretty})"
-      override def symbols: Set[String] = left.symbols ++ right.symbols
-    }
-    final case class Inequality(left: Term, right: Term) extends Formula {
-      override def pretty: String = s"(${left.pretty} != ${right.pretty})"
-      override def symbols: Set[String] = left.symbols ++ right.symbols
-    }
+    final case class QuantifiedFormula(quantifier: Quantifier, variableList: Seq[TypedVariable], body: Formula) extends Formula
+    final case class UnaryFormula(connective: UnaryConnective, body: Formula) extends Formula
+    final case class BinaryFormula(connective: BinaryConnective, left: Formula, right: Formula) extends Formula
+    final case class Equality(left: Term, right: Term) extends Formula
+    final case class Inequality(left: Term, right: Term) extends Formula
     // The following entries are for TFX and can be ignored for everyone not wanting to support it.
-    final case class FormulaVariable(name: String) extends Formula {
-      override def pretty: String = name
-      override def symbols: Set[String] = Set.empty
-    }
-    final case class ConditionalFormula(condition: Formula, thn: Term, els: Term) extends Formula {
-      override def pretty: String = s"$$ite(${condition.pretty}, ${thn.pretty}, ${els.pretty})"
-      override def symbols: Set[String] = condition.symbols ++ thn.symbols ++ els.symbols
-    }
-    final case class LetFormula(typing: Map[String, Type], binding: Seq[(Term, Term)], body: Term) extends Formula {
-      override def pretty: String = {
-        val typeBinding0 = typing.map(t => s"${escapeAtomicWord(t._1)}:${t._2.pretty}").mkString(",")
-        val typeBinding = if (typing.size == 1) typeBinding0 else s"[$typeBinding0]"
-        val termBinding0 = binding.map(t => s"${t._1.pretty} := ${t._2.pretty}").mkString(",")
-        val termBinding = if (binding.size == 1) termBinding0 else s"[$termBinding0]"
-        s"$$let($typeBinding, $termBinding, ${body.pretty})"
-      }
-      override def symbols: Set[String] = typing.keySet ++ body.symbols
-    }
-    final case class Assignment(lhs: Term, rhs: Term) extends Formula {
-      override def pretty: String = s"(${lhs.pretty}) := (${rhs.pretty})"
-      override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
-    }
-    final case class MetaIdentity(lhs: Term, rhs: Term) extends Formula {
-      override def pretty: String = s"(${lhs.pretty}) == (${rhs.pretty})"
-      override def symbols: Set[String] = lhs.symbols ++ rhs.symbols
-    }
+    final case class FormulaVariable(name: String) extends Formula
+    final case class ConditionalFormula(condition: Formula, thn: Term, els: Term) extends Formula
+    final case class LetFormula(typing: Map[String, Type], binding: Seq[(Term, Term)], body: Term) extends Formula
+    final case class Assignment(lhs: Term, rhs: Term) extends Formula
+    final case class MetaIdentity(lhs: Term, rhs: Term) extends Formula
     /** Non-classical formula as per recent TPTP NHF standard. The connective is n-ary with arbitrary n, see the
      * TPTP documentation which connective names have pre-defined meaning. */
-    final case class NonclassicalPolyaryFormula(connective: VararyNonclassicalOperator, args: Seq[Formula]) extends Formula {
-
-      // The long form conncetive adds a '@' itself. Need to remove it again if args is empty :-(
-      override def pretty: String = if (args.isEmpty) {
-        val conPretty = connective.pretty
-        if (conPretty.endsWith("@ ")) s"(${conPretty.dropRight(2)}" else s"(${connective.pretty}"
-      } else s"(${connective.pretty}(${args.map(_.pretty).mkString(",")}))"
-      override def symbols: Set[String] = args.flatMap(_.symbols).toSet
-    }
+    final case class NonclassicalPolyaryFormula(connective: VararyNonclassicalOperator, args: Seq[Formula]) extends Formula
 
     /**
      * Syntactical terms of the TFF language, i.e, first-order terms being one of:
@@ -812,10 +586,7 @@ object TPTP {
      * for non-TFX TFF inputs. In match-case statements, non-exhaustiveness warnings may be suppressed
      * using the [[scala.unchecked]] annotation.
      */
-    sealed abstract class Term extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the term. */
-      def symbols: Set[String]
-    }
+    sealed abstract class Term extends Symbolic
     /**
      * A term expression that is either (1) a constant symbol `c`, or (2) a function expression `f(arg1,arg2,...,argN)`.
      * In case (1) it holds that `args.isEmpty`; in case (2) it holds that `args.nonEmpty`.
@@ -833,13 +604,6 @@ object TPTP {
      *             if the term is a constant symbol.
      */
     final case class AtomicTerm(f: String, args: Seq[Term]) extends Term  {
-      override def pretty: String = {
-        val prettyF = prettyFunctorString(f)
-        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
-      }
-
-      override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
-
       @inline def isUninterpretedFunction: Boolean = !isDefinedFunction && !isSystemFunction
       @inline def isDefinedFunction: Boolean = f.startsWith("$") && !isSystemFunction
       @inline def isSystemFunction: Boolean = f.startsWith("$$")
@@ -854,10 +618,7 @@ object TPTP {
      * @note In the context of TF1, this may also be a type variable (i.e., representing a type).
      *       If TF1 is not to be supported, it can be assumed that this only represents proper term variables.
      */
-    final case class Variable(name: String) extends Term {
-      override def pretty: String = name
-      override def symbols: Set[String] = Set.empty
-    }
+    final case class Variable(name: String) extends Term
     /**
      * A term that represents an object that stands for itself, i.e., a distinct object with name `N`
      * is interpreted to be unequal to every other distinct object with name `N'` iff `N != N'`.
@@ -868,22 +629,13 @@ object TPTP {
      *       That means that the DistinctObject `"something"` is different from the [[AtomicTerm]] `something`,
      *       but may, of course, be equal to it.
      */
-    final case class DistinctObject(name: String) extends Term {
-      override def pretty: String = {
-        assert(name.startsWith("\"") && name.endsWith("\""), "Distinct object without enclosing double quotes.")
-        s""""${escapeDistinctObject(name.tail.init)}""""
-      }
-      override def symbols: Set[String] = Set(name)
-    }
+    final case class DistinctObject(name: String) extends Term
     /**
      * A term that represents a number. The numbers are given by a [[Number]] object.
      *
      * @param value The [[Number]] as a TFF term.
      */
-    final case class NumberTerm(value: Number) extends Term {
-      override def pretty: String = value.pretty
-      override def symbols: Set[String] = Set.empty
-    }
+    final case class NumberTerm(value: Number) extends Term
 
     // The following entries are for TFX and can be ignored for everyone not wanting to support it.
     /**
@@ -893,10 +645,7 @@ object TPTP {
      *
      * @param elements The entries of the tuple.
      */
-    final case class Tuple(elements: Seq[Term]) extends Term {
-      override def pretty: String = s"[${elements.map(_.pretty).mkString(",")}]"
-      override def symbols: Set[String] = elements.flatMap(_.symbols).toSet
-    }
+    final case class Tuple(elements: Seq[Term]) extends Term
 
     /**
      * A formula in term position as used in TFX (FOOL logic). Terms of this kind can safely be ignored
@@ -912,34 +661,19 @@ object TPTP {
      *       Boolean-typed variables or predicate applications, a representation as [[Term]] is returned.
      *       Of course, users may create such instances and handle them appropriately in their application.
      */
-    final case class FormulaTerm(formula: Formula) extends Term {
-      override def pretty: String = formula.pretty
-      override def symbols: Set[String] = formula.symbols
-    }
+    final case class FormulaTerm(formula: Formula) extends Term
 
     /** Logical connectives in TFF, includes [[UnaryConnective]]s and [[BinaryConnective]]s. */
     sealed abstract class Connective extends Pretty
-    sealed abstract class VararyNonclassicalOperator extends Pretty
-    final case class NonclassicalLongOperator(name: String, index: Option[Term], parameters: Seq[(Term, Term)]) extends VararyNonclassicalOperator {
-      override def pretty: String = {
-        val indexPretty: Seq[String] = index.fold(Seq[String]())(idx => Seq(s"#${idx.pretty}"))
-        val parametersPretty: Seq[String] = parameters.map { case (k, v) => s"${k.pretty} := ${v.pretty}" }
-        val prettyAll = indexPretty.concat(parametersPretty)
-        if (prettyAll.isEmpty) s"{$name} @ "
-        else s"{$name(${prettyAll.mkString(",")})} @ "
-      }
+    sealed abstract class VararyNonclassicalOperator extends Pretty {
+      override def pretty: String = TPTPPrinter.render(this)
     }
-    final case class NonclassicalBox(index: Option[Term]) extends VararyNonclassicalOperator {
-      override def pretty: String = if (index.isEmpty) s"[.]" else s"{$$box(#${index.get.pretty})} @ "
-      // Short form with index is not TPTP compliant anymore, so pretty print it as long form
-    }
-    final case class NonclassicalDiamond(index: Option[Term]) extends VararyNonclassicalOperator {
-      override def pretty: String = if (index.isEmpty) s"<.>" else s"{$$dia(#${index.get.pretty})} @ "
-      // Short form with index is not TPTP compliant anymore, so pretty print it as long form
-    }
-    final case class NonclassicalCone(index: Option[Term]) extends VararyNonclassicalOperator {
-      override def pretty: String = if (index.isEmpty) s"/.\\" else s"{$$cone(#${index.get.pretty})} @ "
-    }
+    final case class NonclassicalLongOperator(name: String,
+                                              index: Option[Term],
+                                              parameters: Seq[(Term, Term)]) extends VararyNonclassicalOperator
+    final case class NonclassicalBox(index: Option[Term]) extends VararyNonclassicalOperator
+    final case class NonclassicalDiamond(index: Option[Term]) extends VararyNonclassicalOperator
+    final case class NonclassicalCone(index: Option[Term]) extends VararyNonclassicalOperator
 
     sealed abstract class UnaryConnective extends Connective
     /** Negation */
@@ -971,38 +705,16 @@ object TPTP {
     /** Existential quantification */
     final case object ? extends Quantifier { override def pretty: String = "?" }
     /** epsilon binder (introduced in TPTP language v9.0.0.1) */
-    final case object Epsilon extends Quantifier { override def pretty: String = "#" } // epsilon
+    final case object Epsilon extends Quantifier { override def pretty: String = "#" }
 
-    sealed abstract class Type extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the type. */
-      def symbols: Set[String]
-    }
-    final case class AtomicType(name: String, args: Seq[Type]) extends Type {
-      override def pretty: String = {
-        val escapedName = prettyFunctorString(name)
-        if (args.isEmpty) escapedName else s"$escapedName(${args.map(_.pretty).mkString(",")})"
-      }
-      override def symbols: Set[String] = args.flatMap(_.symbols).toSet + name
-    }
-    final case class MappingType(left: Seq[Type], right: Type) extends Type { // right-assoc
-      override def pretty: String = if (left.length == 1) s"(${left.head.pretty} > ${right.pretty})"
-      else s"((${left.map(_.pretty).mkString(" * ")}) > ${right.pretty})"
-      override def symbols: Set[String] = left.flatMap(_.symbols).toSet ++ right.symbols
-    }
+    sealed abstract class Type extends Symbolic
+    final case class AtomicType(name: String, args: Seq[Type]) extends Type
+    final case class MappingType(left: Seq[Type], right: Type) extends Type // right-assoc
     // TF1
-    final case class QuantifiedType(variables: Seq[TypedVariable], body: Type) extends Type {
-      override def pretty: String = s"!> [${variables.map(prettifyTypedVariable).mkString(",")}]: ${body.pretty}"
-      override def symbols: Set[String] = body.symbols
-    }
-    final case class TypeVariable(name: String) extends Type {
-      override def pretty: String = name
-      override def symbols: Set[String] = Set.empty
-    }
+    final case class QuantifiedType(variables: Seq[TypedVariable], body: Type) extends Type
+    final case class TypeVariable(name: String) extends Type
     // TFX
-    final case class TupleType(components: Seq[Type]) extends Type {
-      override def pretty: String = s"[${components.map(_.pretty).mkString(",")}]"
-      override def symbols: Set[String] = components.flatMap(_.symbols).toSet
-    }
+    final case class TupleType(components: Seq[Type]) extends Type
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -1015,29 +727,11 @@ object TPTP {
   object TCF {
     type Type = TFF.Type
 
-    sealed abstract class Statement extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the formula. */
-      def symbols: Set[String]
-    }
-    final case class Typing(atom: String, typ: Type) extends Statement {
-      override def pretty: String = {
-        val prettyName = prettyFunctorString(atom)
-        s"$prettyName: ${typ.pretty}"
-      }
-      override def symbols: Set[String] = typ.symbols + atom
-    }
-    final case class Logical(formula: Formula) extends Statement {
-      override def pretty: String = formula.pretty
-      override def symbols: Set[String] = formula.symbols
-    }
+    sealed abstract class Statement extends Symbolic
+    final case class Typing(atom: String, typ: Type) extends Statement
+    final case class Logical(formula: Formula) extends Statement
 
-    final case class Formula(variables: Seq[TFF.TypedVariable], clause: CNF.Formula) extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the formula. */
-      def symbols: Set[String] = clause.flatMap(_.symbols).toSet
-      /** Returns a TPTP-compliant serialization of the formula. */
-      def pretty: String = if (variables.isEmpty) clause.map(_.pretty).mkString(" | ")
-      else s"! [${variables.map(TFF.prettifyTypedVariable).mkString(",")}]: ${clause.map(_.pretty).mkString(" | ")}"
-    }
+    final case class Formula(variables: Seq[TFF.TypedVariable], clause: CNF.Formula) extends Symbolic
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -1048,19 +742,10 @@ object TPTP {
 
   /** Contains the FOF AST data types. */
   object FOF {
-    sealed abstract class Statement extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the formula. */
-      def symbols: Set[String]
-    }
-    final case class Logical(formula: Formula) extends Statement {
-      override def pretty: String = formula.pretty
-      override def symbols: Set[String] = formula.symbols
-    }
+    sealed abstract class Statement extends Symbolic
+    final case class Logical(formula: Formula) extends Statement
 
-    sealed abstract class Formula extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the formula. */
-      def symbols: Set[String]
-    }
+    sealed abstract class Formula extends Symbolic
     /** `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
      * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
      * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
@@ -1070,43 +755,18 @@ object TPTP {
      *
      * @see [[TPTP.convertStringToAtomicWord]] */
     final case class AtomicFormula(f: String, args: Seq[Term]) extends Formula  {
-      override def pretty: String = {
-        val prettyF = prettyFunctorString(f)
-        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
-      }
-
-      override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
-
       @inline def isUninterpretedFunction: Boolean = !isDefinedFunction && !isSystemFunction
       @inline def isDefinedFunction: Boolean = f.startsWith("$") && !isSystemFunction
       @inline def isSystemFunction: Boolean = f.startsWith("$$")
       @inline def isConstant: Boolean = args.isEmpty
     }
-    final case class QuantifiedFormula(quantifier: Quantifier, variableList: Seq[String], body: Formula) extends Formula {
-      override def pretty: String = s"(${quantifier.pretty} [${variableList.mkString(",")}]: (${body.pretty}))"
-      override def symbols: Set[String] = body.symbols
-    }
-    final case class UnaryFormula(connective: UnaryConnective, body: Formula) extends Formula {
-      override def pretty: String = s"${connective.pretty} (${body.pretty})"
-      override def symbols: Set[String] = body.symbols
-    }
-    final case class BinaryFormula(connective: BinaryConnective, left: Formula, right: Formula) extends Formula {
-      override def pretty: String = s"(${left.pretty} ${connective.pretty} ${right.pretty})"
-      override def symbols: Set[String] = left.symbols ++ right.symbols
-    }
-    final case class Equality(left: Term, right: Term) extends Formula {
-      override def pretty: String = s"(${left.pretty} = ${right.pretty})"
-      override def symbols: Set[String] = left.symbols ++ right.symbols
-    }
-    final case class Inequality(left: Term, right: Term) extends Formula {
-      override def pretty: String = s"(${left.pretty} != ${right.pretty})"
-      override def symbols: Set[String] = left.symbols ++ right.symbols
-    }
+    final case class QuantifiedFormula(quantifier: Quantifier, variableList: Seq[String], body: Formula) extends Formula
+    final case class UnaryFormula(connective: UnaryConnective, body: Formula) extends Formula
+    final case class BinaryFormula(connective: BinaryConnective, left: Formula, right: Formula) extends Formula
+    final case class Equality(left: Term, right: Term) extends Formula
+    final case class Inequality(left: Term, right: Term) extends Formula
 
-    sealed abstract class Term extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the term. */
-      def symbols: Set[String]
-    }
+    sealed abstract class Term extends Symbolic
     /** `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
      * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
      * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
@@ -1116,34 +776,15 @@ object TPTP {
      *
      * @see [[TPTP.convertStringToAtomicWord]] */
     final case class AtomicTerm(f: String, args: Seq[Term]) extends Term  {
-      override def pretty: String = {
-        val prettyF = prettyFunctorString(f)
-        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
-      }
-
-      override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
-
       @inline def isUninterpretedFunction: Boolean = !isDefinedFunction && !isSystemFunction
       @inline def isDefinedFunction: Boolean = f.startsWith("$") && !isSystemFunction
       @inline def isSystemFunction: Boolean = f.startsWith("$$")
       @inline def isConstant: Boolean = args.isEmpty
     }
     /** A TPTP variable. Precondition for creating a Variable object: `name` is uppercase. */
-    final case class Variable(name: String) extends Term {
-      override def pretty: String = name
-      override def symbols: Set[String] = Set.empty
-    }
-    final case class DistinctObject(name: String) extends Term {
-      override def pretty: String = {
-        assert(name.startsWith("\"") && name.endsWith("\""), "Distinct object without enclosing double quotes.")
-        s""""${escapeDistinctObject(name.tail.init)}""""
-      }
-      override def symbols: Set[String] = Set(name)
-    }
-    final case class NumberTerm(value: Number) extends Term {
-      override def pretty: String = value.pretty
-      override def symbols: Set[String] = Set.empty
-    }
+    final case class Variable(name: String) extends Term
+    final case class DistinctObject(name: String) extends Term
+    final case class NumberTerm(value: Number) extends Term
 
     sealed abstract class Connective extends Pretty
     sealed abstract class UnaryConnective extends Connective
@@ -1165,7 +806,7 @@ object TPTP {
     final case object ! extends Quantifier { override def pretty: String = "!" } // All
     final case object ? extends Quantifier { override def pretty: String = "?" } // Exists
     /** epsilon binder (introduced in TPTP language v9.0.0.1) */
-    final case object Epsilon extends Quantifier { override def pretty: String = "#" } // epsilon
+    final case object Epsilon extends Quantifier { override def pretty: String = "#" }
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -1176,37 +817,16 @@ object TPTP {
 
   /** Contains the CNF AST data types. */
   object CNF {
-    sealed abstract class Statement extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the formula. */
-      def symbols: Set[String]
-    }
-    final case class Logical(formula: Formula) extends Statement {
-      override def pretty: String = formula.map(_.pretty).mkString(" | ")
-      override def symbols: Set[String] = formula.flatMap(_.symbols).toSet
-    }
+    sealed abstract class Statement extends Symbolic
+    final case class Logical(formula: Formula) extends Statement
 
     type Formula = Seq[Literal]
 
-    sealed abstract class Literal extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the literal. */
-      def symbols: Set[String]
-    }
-    final case class PositiveAtomic(formula: AtomicFormula) extends Literal {
-      override def pretty: String = formula.pretty
-      override def symbols: Set[String] = formula.symbols
-    }
-    final case class NegativeAtomic(formula: AtomicFormula) extends Literal {
-      override def pretty: String = s"~ ${formula.pretty}"
-      override def symbols: Set[String] = formula.symbols
-    }
-    final case class Equality(left: Term, right: Term) extends Literal {
-      override def pretty: String = s"${left.pretty} = ${right.pretty}"
-      override def symbols: Set[String] = left.symbols ++ right.symbols
-    }
-    final case class Inequality(left: Term, right: Term) extends Literal {
-      override def pretty: String = s"${left.pretty} != ${right.pretty}"
-      override def symbols: Set[String] = left.symbols ++ right.symbols
-    }
+    sealed abstract class Literal extends Symbolic
+    final case class PositiveAtomic(formula: AtomicFormula) extends Literal
+    final case class NegativeAtomic(formula: AtomicFormula) extends Literal
+    final case class Equality(left: Term, right: Term) extends Literal
+    final case class Inequality(left: Term, right: Term) extends Literal
 
     /** `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
      * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
@@ -1216,24 +836,14 @@ object TPTP {
      * transform via {{{TPTP.convertStringToAtomicWord}}} if necessary before.
      *
      * @see [[TPTP.convertStringToAtomicWord]] */
-    final case class AtomicFormula(f: String, args: Seq[Term]) extends Pretty {
-      def pretty: String = {
-        val prettyF = prettyFunctorString(f)
-        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
-      }
-
-      def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
-
+    final case class AtomicFormula(f: String, args: Seq[Term]) extends Symbolic {
       @inline def isUninterpretedFunction: Boolean = !isDefinedFunction && !isSystemFunction
       @inline def isDefinedFunction: Boolean = f.startsWith("$") && !isSystemFunction
       @inline def isSystemFunction: Boolean = f.startsWith("$$")
       @inline def isConstant: Boolean = args.isEmpty
     }
 
-    sealed abstract class Term extends Pretty {
-      /** Returns a set of symbols (except variables) occurring in the term. */
-      def symbols: Set[String]
-    }
+    sealed abstract class Term extends Symbolic
     /** `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
      * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
      * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
@@ -1243,29 +853,13 @@ object TPTP {
      *
      * @see [[TPTP.convertStringToAtomicWord]] */
     final case class AtomicTerm(f: String, args: Seq[Term]) extends Term  {
-      override def pretty: String = {
-        val prettyF = prettyFunctorString(f)
-        if (args.isEmpty) prettyF else s"$prettyF(${args.map(_.pretty).mkString(",")})"
-      }
-
-      override def symbols: Set[String] = args.flatMap(_.symbols).toSet + f
-
       @inline def isUninterpretedFunction: Boolean = !isDefinedFunction && !isSystemFunction
       @inline def isDefinedFunction: Boolean = f.startsWith("$") && !isSystemFunction
       @inline def isSystemFunction: Boolean = f.startsWith("$$")
       @inline def isConstant: Boolean = args.isEmpty
     }
     /** A TPTP variable. Precondition for creating a Variable object: `name` is uppercase. */
-    final case class Variable(name: String) extends Term {
-      override def pretty: String = name
-      override def symbols: Set[String] = Set.empty
-    }
-    final case class DistinctObject(name: String) extends Term {
-      override def pretty: String = {
-        assert(name.startsWith("\"") && name.endsWith("\""), "Distinct object without enclosing double quotes.")
-        s""""${escapeDistinctObject(name.tail.init)}""""
-      }
-      override def symbols: Set[String] = Set(name)
-    }
+    final case class Variable(name: String) extends Term
+    final case class DistinctObject(name: String) extends Term
   }
 }
