@@ -1058,14 +1058,16 @@ object TPTPParser {
               val op = tokenToTHFBinaryConnective(opTok)
               val f2 = thfUnitFormula(acceptEqualityLike = true)
               // collect all further formulas with same associative operator
-              var fs: Seq[THF.Formula] = Vector(f1,f2)
+              val fs = Vector.newBuilder[THF.Formula]
+              fs += f1
+              fs += f2
               while (tokens.hasNext && peek()._1 == opTok._1) {
                 consume()
                 val f = thfUnitFormula(acceptEqualityLike = true)
-                fs = fs :+ f
+                fs += f
               }
-              if (op == THF.App) fs.reduceLeft((x,y) => THF.BinaryFormula(op, x, y))
-              else fs.reduceRight((x,y) => THF.BinaryFormula(op, x, y))
+              if (op == THF.App) fs.result().reduceLeft((x,y) => THF.BinaryFormula(op, x, y))
+              else fs.result().reduceRight((x,y) => THF.BinaryFormula(op, x, y))
             } else if (isBinaryTHFTypeConstructor(c)) {
               val opTok = consume()
               val op = tokenToTHFBinaryTypeConstructor(opTok)
@@ -1075,18 +1077,20 @@ object TPTPParser {
                 } else {
                   val f2 = thfUnitFormula(acceptEqualityLike = false)
                   // collect all further formulas with same associative operator
-                  var fs: Seq[THF.Formula] = Vector(f1,f2)
+                  val fs = Vector.newBuilder[THF.Formula]
+                  fs += f1
+                  fs += f2
                   while (peek()._1 == opTok._1) {
                     consume()
                     if (!isUnaryTHFConnective(peek()._1)) {
                       val f = thfUnitFormula(acceptEqualityLike = false)
-                      fs = fs :+ f
+                      fs += f
                     } else {
                       error2("Unexpected binary type constructor before <thf_unary_formula>.", peek())
                     }
                   }
-                  if (op == THF.FunTyConstructor) fs.reduceRight((x,y) => THF.BinaryFormula(op, x, y))
-                  else fs.reduceLeft((x,y) => THF.BinaryFormula(op, x, y))
+                  if (op == THF.FunTyConstructor) fs.result().reduceRight((x,y) => THF.BinaryFormula(op, x, y))
+                  else fs.result().reduceLeft((x,y) => THF.BinaryFormula(op, x, y))
                 }
               } else {
                 error2("Unexpected binary type constructor after <thf_unary_formula>.", opTok)
@@ -1112,29 +1116,27 @@ object TPTPParser {
         case LOWERWORD | DOLLARDOLLARWORD => // counts as ATOM, hence + expect equality
           feasibleForEq = true
           val fn = consume()._2
-          var args: Seq[THF.Formula] = Vector.empty
           val lp = o(LPAREN, null)
-          if (lp != null) {
-            args = args :+ thfLogicFormula()
-            while (o(COMMA, null) != null) {
-              args = args :+ thfLogicFormula()
-            }
+          val args = if (lp != null) {
+            val firstArgument = thfLogicFormula()
+            val result = if (o(COMMA, null) == null) Vector(firstArgument)
+            else commaSeparatedTail(firstArgument)(thfLogicFormula())
             a(RPAREN)
-          }
+            result
+          } else Vector.empty
           THF.FunctionTerm(fn, args)
 
         case SINGLEQUOTED => // counts as ATOM, hence + expect equality // Singlequoted may need to get extra quotes
           feasibleForEq = true
           val fn = consume()._2
-          var args: Seq[THF.Formula] = Vector.empty
           val lp = o(LPAREN, null)
-          if (lp != null) {
-            args = args :+ thfLogicFormula()
-            while (o(COMMA, null) != null) {
-              args = args :+ thfLogicFormula()
-            }
+          val args = if (lp != null) {
+            val firstArgument = thfLogicFormula()
+            val result = if (o(COMMA, null) == null) Vector(firstArgument)
+            else commaSeparatedTail(firstArgument)(thfLogicFormula())
             a(RPAREN)
-          }
+            result
+          } else Vector.empty
           if (TPTP.isLowerWord(fn)) THF.FunctionTerm(fn, args)
           else THF.FunctionTerm(s"'$fn'", args)
 
@@ -1146,24 +1148,26 @@ object TPTPParser {
         case q if isTHFQuantifier(q) =>
           val quantifier = tokenToTHFQuantifier(consume())
           a(LBRACKET)
-          var variables: Seq[THF.TypedVariable] = Vector(typedVariable())
+          val variables = Vector.newBuilder[THF.TypedVariable]
+          variables += typedVariable()
           while(o(COMMA, null) != null) {
-            variables = variables :+ typedVariable()
+            variables += typedVariable()
           }
           a(RBRACKET)
           a(COLON)
           val body = thfUnitFormula(acceptEqualityLike = true)
-          THF.QuantifiedFormula(quantifier, variables, body)
+          THF.QuantifiedFormula(quantifier, variables.result(), body)
 
 
         case q if isUnaryTHFConnective(q) =>
           val op = tokenToTHFUnaryConnective(consume())
-          var listOfUnaries: Seq[THF.UnaryConnective] = Vector(op)
+          val listOfUnaries = Vector.newBuilder[THF.UnaryConnective]
+          listOfUnaries += op
           while (isUnaryTHFConnective(peek()._1)) {
-            listOfUnaries = listOfUnaries :+ tokenToTHFUnaryConnective(consume())
+            listOfUnaries += tokenToTHFUnaryConnective(consume())
           }
           val body = thfUnitFormula(acceptEqualityLike = false)
-          listOfUnaries.foldRight(body)((op, acc) => THF.UnaryFormula(op, acc))
+          listOfUnaries.result().foldRight(body)((op, acc) => THF.UnaryFormula(op, acc))
 
         case LPAREN if isTHFConnective(peek(1)._1) && peek(2)._1 == RPAREN => // counts as ATOM, hence + expect equality
           feasibleForEq = true
@@ -1254,15 +1258,14 @@ object TPTPParser {
                 THF.ConditionalTerm(cond, thn, els)
               }
             case _ => // general fof-like function
-              var args: Seq[THF.Formula] = Vector.empty
               val lp = o(LPAREN, null)
-              if (lp != null) {
-                args = args :+ thfLogicFormula()
-                while (o(COMMA, null) != null) {
-                  args = args :+ thfLogicFormula()
-                }
+              val args = if (lp != null) {
+                val firstArgument = thfLogicFormula()
+                val result = if (o(COMMA, null) == null) Vector(firstArgument)
+                else commaSeparatedTail(firstArgument)(thfLogicFormula())
                 a(RPAREN)
-              }
+                result
+              } else Vector.empty
               THF.FunctionTerm(fn, args)
           }
 
@@ -1354,18 +1357,18 @@ object TPTPParser {
           }
           // Parameter part
           var index: Option[THF.Formula] = None
-          var parameters: Seq[(THF.Formula, THF.Formula)] = Vector.empty
+          val parameters = Vector.newBuilder[(THF.Formula, THF.Formula)]
           if (o(LPAREN, null) != null) {
             val indexOrParameter = thfNCLIndexOrParameter()
             indexOrParameter match {
               case Left(idx) => index = Some(idx)
-              case Right(param) => parameters = Vector(param)
+              case Right(param) => parameters += param
             }
             while (o(COMMA, null) != null) {
               val indexOrParameter = thfNCLIndexOrParameter()
               indexOrParameter match {
                 case Left(idx) => error2(s"Index values only allowed as first entry in parameter list, but '${idx.pretty}' found at non-head position.", next)
-                case Right(param) => parameters = parameters :+ param
+                case Right(param) => parameters += param
               }
             }
             a(RPAREN)
@@ -1373,11 +1376,11 @@ object TPTPParser {
           // Parameter part END
           a(RBRACES)
           // Maybe applied to something? Collect all.
-          var arguments: Seq[THF.Formula] = Vector.empty
+          val arguments = Vector.newBuilder[THF.Formula]
           while (o(APP, null) != null) {
-            arguments = arguments :+ thfUnitFormula(acceptEqualityLike = false)
+            arguments += thfUnitFormula(acceptEqualityLike = false)
           }
-          THF.NonclassicalPolyaryFormula(THF.NonclassicalLongOperator(name, index, parameters), arguments)
+          THF.NonclassicalPolyaryFormula(THF.NonclassicalLongOperator(name, index, parameters.result()), arguments.result())
 
         case _ => error2(s"Unrecognized thf formula input '${tok._1}'", tok)
       }
@@ -1404,12 +1407,13 @@ object TPTPParser {
       if (rb != null) THF.Tuple(Seq.empty)
       else {
         val f = thfLogicFormula()
-        var fs: Seq[THF.Formula] = Vector(f)
+        val fs = Vector.newBuilder[THF.Formula]
+        fs += f
         while (o(COMMA, null) != null) {
-          fs = fs :+ thfLogicFormula()
+          fs += thfLogicFormula()
         }
         a(RBRACKET)
-        THF.Tuple(fs)
+        THF.Tuple(fs.result())
       }
     }
 
@@ -1465,18 +1469,20 @@ object TPTPParser {
           } else {
             val f2 = thfUnitFormula(acceptEqualityLike = false)
             // collect all further formulas with same associative operator
-            var fs: Seq[THF.Formula] = Vector(f1,f2)
+            val fs = Vector.newBuilder[THF.Formula]
+            fs += f1
+            fs += f2
             while (peek()._1 == opTok._1) {
               consume()
               if (!isUnaryTHFConnective(peek()._1)) {
                 val f = thfUnitFormula(acceptEqualityLike = false)
-                fs = fs :+ f
+                fs += f
               } else {
                 error2("Unexpected binary type constructor before <thf_unary_formula>.", peek())
               }
             }
-            if (op == THF.FunTyConstructor) fs.reduceRight((x,y) => THF.BinaryFormula(op, x, y))
-            else fs.reduceLeft((x,y) => THF.BinaryFormula(op, x, y))
+            if (op == THF.FunTyConstructor) fs.result().reduceRight((x,y) => THF.BinaryFormula(op, x, y))
+            else fs.result().reduceLeft((x,y) => THF.BinaryFormula(op, x, y))
           }
         case _ => f1
       }
@@ -1663,13 +1669,15 @@ object TPTPParser {
               val op = tokenToTFFBinaryConnective(opTok)
               val f2 = tffUnitFormula(tfx, acceptEqualityLike = true)
               // collect all further formulas with same associative operator
-              var fs: Seq[TFF.Formula] = Vector(f1,f2)
+              val fs = Vector.newBuilder[TFF.Formula]
+              fs += f1
+              fs += f2
               while (tokens.hasNext && peek()._1 == opTok._1) {
                 consume()
                 val f = tffUnitFormula(tfx, acceptEqualityLike = true)
-                fs = fs :+ f
+                fs += f
               }
-              fs.reduceRight((x,y) => TFF.BinaryFormula(op, x, y))
+              fs.result().reduceRight((x,y) => TFF.BinaryFormula(op, x, y))
             } else {
               // non-assoc; just parse one more unit and then done.
               val op = tokenToTFFBinaryConnective(consume())
@@ -1702,14 +1710,15 @@ object TPTPParser {
           val quantifier = tokenToTFFQuantifier(consume())
           a(LBRACKET)
           val name = typedTFFVariable()
-          var names: Seq[TFF.TypedVariable] = Vector(name)
+          val names = Vector.newBuilder[TFF.TypedVariable]
+          names += name
           while (o(COMMA, null) != null) {
-            names = names :+ typedTFFVariable()
+            names += typedTFFVariable()
           }
           a(RBRACKET)
           a(COLON)
           val body = tffUnitFormula(tfx, acceptEqualityLike = true)
-          TFF.QuantifiedFormula(quantifier, names, body)
+          TFF.QuantifiedFormula(quantifier, names.result(), body)
 
         // TFX only
         case DOLLARWORD if tok._2 == "$let" && tfx =>
@@ -1890,18 +1899,18 @@ object TPTPParser {
           }
           // Parameter part
           var index: Option[TFF.Term] = None
-          var parameters: Seq[(TFF.Term, TFF.Term)] = Vector.empty
+          val parameters = Vector.newBuilder[(TFF.Term, TFF.Term)]
           if (o(LPAREN, null) != null) {
             val indexOrParameter = tffNCLIndexOrParameter()
             indexOrParameter match {
               case Left(idx) => index = Some(idx)
-              case Right(param) => parameters = Vector(param)
+              case Right(param) => parameters += param
             }
             while (o(COMMA, null) != null) {
               val indexOrParameter = tffNCLIndexOrParameter()
               indexOrParameter match {
                 case Left(idx) => error2(s"Index values only allowed as first entry in parameter list, but '${idx.pretty}' found at non-head position.", next)
-                case Right(param) => parameters = parameters :+ param
+                case Right(param) => parameters += param
               }
             }
             a(RPAREN)
@@ -1911,14 +1920,15 @@ object TPTPParser {
           // operator done, arguments now
           if (o(APP, null) != null) {
             a(LPAREN)
-            var args: Seq[TFF.Formula] = Vector(tffLogicFormula0(tfx))
+            val args = Vector.newBuilder[TFF.Formula]
+            args += tffLogicFormula0(tfx)
             while (o(COMMA, null) != null) {
-              args = args :+ tffLogicFormula0(tfx)
+              args += tffLogicFormula0(tfx)
             }
             a(RPAREN)
-            TFF.NonclassicalPolyaryFormula(TFF.NonclassicalLongOperator(name, index, parameters), args)
+            TFF.NonclassicalPolyaryFormula(TFF.NonclassicalLongOperator(name, index, parameters.result()), args.result())
           } else {
-            TFF.NonclassicalPolyaryFormula(TFF.NonclassicalLongOperator(name, index, parameters), Seq.empty)
+            TFF.NonclassicalPolyaryFormula(TFF.NonclassicalLongOperator(name, index, parameters.result()), Seq.empty)
           }
 
         case LANGLE if tfx => // non-classical short form diamond (only in TFX)
@@ -1995,14 +2005,13 @@ object TPTPParser {
 
     @inline private[this] def tffAtomicFormula(tfx: Boolean, functionIsSingleQuoted: Boolean = false): TFF.AtomicFormula = {
       val fn = consume()._2
-      var args: Seq[TFF.Term] = Vector.empty
-      if (o(LPAREN, null) != null) {
-        args = args :+ tffTerm(tfx)
-        while (o(COMMA, null) != null) {
-          args = args :+ tffTerm(tfx)
-        }
+      val args = if (o(LPAREN, null) != null) {
+        val firstArgument = tffTerm(tfx)
+        val result = if (o(COMMA, null) == null) Vector(firstArgument)
+        else commaSeparatedTail(firstArgument)(tffTerm(tfx))
         a(RPAREN)
-      }
+        result
+      } else Vector.empty
       if (functionIsSingleQuoted) {
         if (TPTP.isLowerWord(fn)) TFF.AtomicFormula(fn, args) else TFF.AtomicFormula(s"'$fn'", args)
       } else TFF.AtomicFormula(fn, args)
@@ -2058,12 +2067,13 @@ object TPTPParser {
     private[this] def tffTuple(): TFF.Tuple = {
       a(LBRACKET)
       if (o(RBRACKET, null) == null) {
-        var entries: Seq[TFF.Term] = Vector(tffLogicFormulaOrTerm())
+        val entries = Vector.newBuilder[TFF.Term]
+        entries += tffLogicFormulaOrTerm()
         while (o(COMMA, null) != null) {
-          entries = entries :+ tffLogicFormulaOrTerm()
+          entries += tffLogicFormulaOrTerm()
         }
         a(RBRACKET)
-        TFF.Tuple(entries)
+        TFF.Tuple(entries.result())
       } else {
         // empty tuple
         TFF.Tuple(Seq.empty)
@@ -2101,13 +2111,15 @@ object TPTPParser {
               val op = tokenToTFFBinaryConnective(opTok)
               val f2 = tffUnitFormula(tfx = true, acceptEqualityLike = true)
               // collect all further formulas with same associative operator
-              var fs: Seq[TFF.Formula] = Vector(formula,f2)
+              val fs = Vector.newBuilder[TFF.Formula]
+              fs += formula
+              fs += f2
               while (tokens.hasNext && peek()._1 == opTok._1) {
                 consume()
                 val f = tffUnitFormula(tfx = true, acceptEqualityLike = true)
-                fs = fs :+ f
+                fs += f
               }
-              TFF.FormulaTerm(fs.reduceRight((x,y) => TFF.BinaryFormula(op, x, y)))
+              TFF.FormulaTerm(fs.result().reduceRight((x,y) => TFF.BinaryFormula(op, x, y)))
             } else {
               // non-assoc; just parse one more unit and then done.
               val op = tokenToTFFBinaryConnective(consume())
@@ -2140,14 +2152,15 @@ object TPTPParser {
           val quantifier = tokenToTFFQuantifier(consume())
           a(LBRACKET)
           val name = typedTFFVariable()
-          var names: Seq[TFF.TypedVariable] = Vector(name)
+          val names = Vector.newBuilder[TFF.TypedVariable]
+          names += name
           while (o(COMMA, null) != null) {
-            names = names :+ typedTFFVariable()
+            names += typedTFFVariable()
           }
           a(RBRACKET)
           a(COLON)
           val body = tffUnitFormula(tfx, acceptEqualityLike = true)
-          TFF.FormulaTerm(TFF.QuantifiedFormula(quantifier, names, body))
+          TFF.FormulaTerm(TFF.QuantifiedFormula(quantifier, names.result(), body))
 
         // TFX only
         case DOLLARWORD if tok._2 == "$let" && tfx =>
@@ -2291,9 +2304,10 @@ object TPTPParser {
         case TYFORALL =>
           consume()
           a(LBRACKET)
-          var variables: Seq[TFF.TypedVariable] = Vector(typedTFFVariable())
+          val variables = Vector.newBuilder[TFF.TypedVariable]
+          variables += typedTFFVariable()
           while (o(COMMA, null) != null) {
-            variables = variables :+ typedTFFVariable()
+            variables += typedTFFVariable()
           }
           a(RBRACKET)
           a(COLON)
@@ -2303,7 +2317,7 @@ object TPTPParser {
             case TYFORALL => tffQuantifiedType()
             case _ => tffAtomicType()
           }
-          TFF.QuantifiedType(variables, body)
+          TFF.QuantifiedType(variables.result(), body)
         case _ => error(Seq(LPAREN, TYFORALL), tok)
       }
     }
@@ -2356,32 +2370,35 @@ object TPTPParser {
         case DOLLARWORD | LOWERWORD =>
           val fn = consume()._2
           if (o(LPAREN, null) != null) {
-            var arguments: Seq[TFF.Type] = Vector(tffAtomicType())
+            val arguments = Vector.newBuilder[TFF.Type]
+            arguments += tffAtomicType()
             while (o(COMMA, null) != null) {
-              arguments = arguments :+ tffAtomicType()
+              arguments += tffAtomicType()
             }
             a(RPAREN)
-            TFF.AtomicType(fn, arguments)
+            TFF.AtomicType(fn, arguments.result())
           } else TFF.AtomicType(fn, Seq.empty)
         case SINGLEQUOTED => // same as before, maybe add single quotes
           val fn0 = consume()._2
           val fn = if (TPTP.isLowerWord(fn0)) fn0 else s"'$fn0'"
           if (o(LPAREN, null) != null) {
-            var arguments: Seq[TFF.Type] = Vector(tffAtomicType())
+            val arguments = Vector.newBuilder[TFF.Type]
+            arguments += tffAtomicType()
             while (o(COMMA, null) != null) {
-              arguments = arguments :+ tffAtomicType()
+              arguments += tffAtomicType()
             }
             a(RPAREN)
-            TFF.AtomicType(fn, arguments)
+            TFF.AtomicType(fn, arguments.result())
           } else TFF.AtomicType(fn, Seq.empty)
         case LBRACKET =>
           consume()
-          var entries: Seq[TFF.Type] = Vector(tffTopLevelType())
+          val entries = Vector.newBuilder[TFF.Type]
+          entries += tffTopLevelType()
           while (o(COMMA, null) != null) {
-            entries = entries :+ tffTopLevelType()
+            entries += tffTopLevelType()
           }
           a(RBRACKET)
-          TFF.TupleType(entries)
+          TFF.TupleType(entries.result())
         case _ => error(Seq(LPAREN, UPPERWORD, DOLLARWORD, LOWERWORD, SINGLEQUOTED, LBRACKET), tok)
       }
     }
@@ -2462,13 +2479,15 @@ object TPTPParser {
               val op = tokenToFOFBinaryConnective(opTok)
               val f2 = fofUnitFormula()
               // collect all further formulas with same associative operator
-              var fs: Seq[FOF.Formula] = Vector(f1,f2)
+              val fs = Vector.newBuilder[FOF.Formula]
+              fs += f1
+              fs += f2
               while (tokens.hasNext && peek()._1 == opTok._1) {
                 consume()
                 val f = fofUnitFormula()
-                fs = fs :+ f
+                fs += f
               }
-              fs.reduceRight((x,y) => FOF.BinaryFormula(op, x, y))
+              fs.result().reduceRight((x,y) => FOF.BinaryFormula(op, x, y))
             } else {
               // non-assoc; just parse one more unit and then done.
               val op = tokenToFOFBinaryConnective(consume())
@@ -2497,14 +2516,15 @@ object TPTPParser {
           val quantifier = tokenToFOFQuantifier(consume())
           a(LBRACKET)
           val name = variable()
-          var names: Seq[String] = Vector(name)
+          val names = Vector.newBuilder[String]
+          names += name
           while (o(COMMA, null) != null) {
-            names = names :+ variable()
+            names += variable()
           }
           a(RBRACKET)
           a(COLON)
           val body = fofUnitFormula()
-          FOF.QuantifiedFormula(quantifier, names, body)
+          FOF.QuantifiedFormula(quantifier, names.result(), body)
         case LOWERWORD | UPPERWORD | DOLLARWORD | DOLLARDOLLARWORD | SINGLEQUOTED | DOUBLEQUOTED | INT | RATIONAL | REAL =>
           val term1 = fofTerm()
           // expect = and != still, if any
@@ -2543,25 +2563,23 @@ object TPTPParser {
           FOF.Variable(consume()._2)
         case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD =>
           val fn = consume()._2
-          var args: Seq[FOF.Term] = Vector()
-          if (o(LPAREN, null) != null) {
-            args = args :+ fofTerm()
-            while (o(COMMA, null) != null) {
-              args = args :+ fofTerm()
-            }
+          val args = if (o(LPAREN, null) != null) {
+            val firstArgument = fofTerm()
+            val result = if (o(COMMA, null) == null) Vector(firstArgument)
+            else commaSeparatedTail(firstArgument)(fofTerm())
             a(RPAREN)
-          }
+            result
+          } else Vector.empty
           FOF.AtomicTerm(fn, args)
         case SINGLEQUOTED => // same as before, only add single quotes if necessary
           val fn = consume()._2
-          var args: Seq[FOF.Term] = Vector()
-          if (o(LPAREN, null) != null) {
-            args = args :+ fofTerm()
-            while (o(COMMA, null) != null) {
-              args = args :+ fofTerm()
-            }
+          val args = if (o(LPAREN, null) != null) {
+            val firstArgument = fofTerm()
+            val result = if (o(COMMA, null) == null) Vector(firstArgument)
+            else commaSeparatedTail(firstArgument)(fofTerm())
             a(RPAREN)
-          }
+            result
+          } else Vector.empty
           if (TPTP.isLowerWord(fn)) FOF.AtomicTerm(fn, args) else FOF.AtomicTerm(s"'$fn'", args)
         case _ => error(Seq(INT, RATIONAL, REAL, DOUBLEQUOTED, UPPERWORD, LOWERWORD, SINGLEQUOTED, DOLLARWORD, DOLLARDOLLARWORD), tok)
       }
@@ -2625,14 +2643,15 @@ object TPTPParser {
           consume()
           a(LBRACKET)
           val name = typedTFFVariable()
-          var names: Seq[TFF.TypedVariable] = Vector(name)
+          val names = Vector.newBuilder[TFF.TypedVariable]
+          names += name
           while (o(COMMA, null) != null) {
-            names = names :+ typedTFFVariable()
+            names += typedTFFVariable()
           }
           a(RBRACKET)
           a(COLON)
           val body = cnfLogicFormula()
-          TCF.Formula(names, body)
+          TCF.Formula(names.result(), body)
         case _ =>
           val body = cnfLogicFormula()
           TCF.Formula(Seq.empty, body)
@@ -2689,12 +2708,22 @@ object TPTPParser {
           a(RPAREN)
           res
         case _ =>
-          val lit = cnfLiteral()
-          var lits: Seq[CNF.Literal] = Vector(lit)
-          while (o(OR, null) != null) {
-            lits = lits :+ cnfLiteral()
+          val first = cnfLiteral()
+          if (o(OR, null) == null) Vector(first)
+          else {
+            val second = cnfLiteral()
+            if (o(OR, null) == null) Vector(first, second)
+            else {
+              val lits = Vector.newBuilder[CNF.Literal]
+              lits += first
+              lits += second
+              lits += cnfLiteral()
+              while (o(OR, null) != null) {
+                lits += cnfLiteral()
+              }
+              lits.result()
+            }
           }
-          lits
       }
     }
 
@@ -2738,27 +2767,25 @@ object TPTPParser {
       tok._1 match {
         case LOWERWORD | DOLLARWORD | DOLLARDOLLARWORD =>
           val fn = consume()._2
-          var args: Seq[CNF.Term] = Vector.empty
           val lp = o(LPAREN, null)
-          if (lp != null) {
-            args = args :+ cnfTerm()
-            while (o(COMMA, null) != null) {
-              args = args :+ cnfTerm()
-            }
+          val args = if (lp != null) {
+            val firstArgument = cnfTerm()
+            val result = if (o(COMMA, null) == null) Vector(firstArgument)
+            else commaSeparatedTail(firstArgument)(cnfTerm())
             a(RPAREN)
-          }
+            result
+          } else Vector.empty
           CNF.AtomicTerm(fn, args)
         case SINGLEQUOTED => // same as before, only add single quotes if necessary
           val fn = consume()._2
-          var args: Seq[CNF.Term] = Vector.empty
           val lp = o(LPAREN, null)
-          if (lp != null) {
-            args = args :+ cnfTerm()
-            while (o(COMMA, null) != null) {
-              args = args :+ cnfTerm()
-            }
+          val args = if (lp != null) {
+            val firstArgument = cnfTerm()
+            val result = if (o(COMMA, null) == null) Vector(firstArgument)
+            else commaSeparatedTail(firstArgument)(cnfTerm())
             a(RPAREN)
-          }
+            result
+          } else Vector.empty
           if (TPTP.isLowerWord(fn)) CNF.AtomicTerm(fn, args) else CNF.AtomicTerm(s"'$fn'", args)
         case UPPERWORD =>
           CNF.Variable(consume()._2)
@@ -3016,6 +3043,25 @@ object TPTPParser {
     // General purpose functions
     ////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////
+
+    /** Collects arguments after the first comma has already been consumed.
+      * 
+      * 
+      */
+    private[this] def commaSeparatedTail[A](first: A)(readNext: => A): Vector[A] = {
+      val second = readNext
+      if (o(COMMA, null) == null) Vector(first, second)
+      else {
+        val result = Vector.newBuilder[A]
+        result += first
+        result += second
+        result += readNext
+        while (o(COMMA, null) != null) {
+          result += readNext
+        }
+        result.result()
+      }
+    }
 
     @inline private[this] def peek(): Token = {
       if (tokens.hasNext) {
