@@ -28,10 +28,7 @@ package datastructures
 object TPTP {
   /** Syntactic symbol categories, THF expressions are both formulas and terms;
     */
-  trait Symbolic extends Pretty {
-    /** Serialize this node using the shared iterative printer. */
-    override def pretty: String = TPTPPrinter.render(this)
-
+  private[datastructures] trait SymbolQuery  {
     /** Predicate symbols; for THF, the same expression symbols as termSymbols. */
     def formulaSymbols: Set[String] = TPTPSymbols.collect(this, TPTPSymbols.Formula)
     /** Function/constant symbols and distinct objects, excluding variables/numbers. */
@@ -41,6 +38,10 @@ object TPTP {
     /** Union of the three categories, computed in one traversal. */
     @deprecated("Use formulaSymbols, termSymbols, or typeSymbols instead.", "next")
     def symbols: Set[String] = TPTPSymbols.collect(this, TPTPSymbols.All)
+  }
+  private[datastructures] trait TPTPPrinterPretty extends Pretty {
+    /** Serialize this node using the shared iterative [[TPTPPrinter]]. */
+    override def pretty: String = TPTPPrinter.render(this)
   }
 
   /** Representation of TPTP include directives, where the first element in the file to be includes, the
@@ -204,11 +205,11 @@ object TPTP {
    * the line number/offset of the formula within the file it was read from. See [[AnnotatedFormula.meta]] for details.
    * Equality comparisons between different objects of this type should ignore the [[AnnotatedFormula.meta]] field, i.e.
    * different objects with all fields equal except for `meta` are considered equal. */
-  sealed abstract class AnnotatedFormula extends Symbolic {
+  sealed abstract class AnnotatedFormula extends TPTPPrinterPretty with SymbolQuery {
     import AnnotatedFormula.FormulaType.FormulaType
 
     /** The type of the wrapped formula. */
-    type F <: Pretty
+    type F <: Pretty with SymbolQuery
     /** The name of the annotated formula. */
     def name: String
     /** The role of the annotated formula. */
@@ -320,9 +321,7 @@ object TPTP {
    * @see [[TPTP.Rational]]
    * @see [[TPTP.Real]]
    */
-  sealed abstract class Number extends Pretty {
-    override def pretty: String = TPTPPrinter.render(this)
-  }
+  sealed abstract class Number extends TPTPPrinterPretty
   /** Representation of an integer. */
   final case class Integer(value: BigInt) extends Number
   /** Representation of a rational number p/q where p is `numerator` and q is `denominator`. */
@@ -333,9 +332,7 @@ object TPTP {
 
   /** Returns a TPTP-compliant serialization of the "general_term" (cf. TPTP syntax BNF). */
   final case class GeneralTerm(data: Seq[GeneralData],
-                               list: Option[Seq[GeneralTerm]]) extends Pretty {
-    def pretty: String = TPTPPrinter.render(this)
-  }
+                               list: Option[Seq[GeneralTerm]]) extends TPTPPrinterPretty
 
   /** General formula annotation data. Can be one of the following:
     *   - [[MetaFunctionData]], a term-like meta expression: either a (meta-)function or a (meta-)constant.
@@ -347,9 +344,7 @@ object TPTP {
     *   @see See [[GeneralTerm]] for some context and
     *        [[http://tptp.org/TPTP/SyntaxBNF.html#general_term]] for a use case.
     */
-  sealed abstract class GeneralData extends Pretty {
-    override def pretty: String = TPTPPrinter.render(this)
-  }
+  sealed abstract class GeneralData extends TPTPPrinterPretty
   /** @see [[GeneralData]] */
   final case class MetaFunctionData(f: String, args: Seq[GeneralTerm]) extends GeneralData
   /** @see [[GeneralData]] */
@@ -361,9 +356,7 @@ object TPTP {
   /** @see [[GeneralData]] */
   final case class GeneralFormulaData(data: FormulaData) extends GeneralData
 
-  sealed abstract class FormulaData extends Pretty {
-    override def pretty: String = TPTPPrinter.render(this)
-  }
+  sealed abstract class FormulaData extends TPTPPrinterPretty
   final case class THFData(formula: THF.Statement) extends FormulaData
   final case class TFFData(formula: TFF.Statement) extends FormulaData
   final case class FOFData(formula: FOF.Statement) extends FormulaData
@@ -381,7 +374,7 @@ object TPTP {
     type TypedVariable = (String, Type)
     type Type = Formula
 
-    sealed abstract class Statement extends Symbolic {
+    sealed abstract class Statement extends TPTPPrinterPretty with SymbolQuery {
       override def formulaSymbols: Set[String] = termSymbols
     }
     final case class Typing(atom: String, typ: Type) extends Statement
@@ -391,7 +384,7 @@ object TPTP {
     // Types as terms; for TH1 parsing. That's why we dont have a clean separation between terms and types here.
     // We don't care for well-typedness etc. in parsing. We can parse syntactically correct but completely meaningless
     // and ill-typed inputs. This will be addressed in the interpretation step.
-    sealed abstract class Formula extends Symbolic {
+    sealed abstract class Formula extends TPTPPrinterPretty with SymbolQuery {
       override def formulaSymbols: Set[String] = termSymbols
     }
 
@@ -474,9 +467,7 @@ object TPTP {
     /** Sum type constructor (type as term) */
     final case object SumTyConstructor extends BinaryConnective { override def pretty: String = "+" }
 
-    sealed abstract class VararyNonclassicalOperator extends Pretty {
-      override def pretty: String = TPTPPrinter.render(this)
-    }
+    sealed abstract class VararyNonclassicalOperator extends TPTPPrinterPretty
     final case class NonclassicalLongOperator(name: String,
                                               index: Option[Formula],
                                               parameters: Seq[(Formula, Formula)]) extends VararyNonclassicalOperator
@@ -535,12 +526,12 @@ object TPTP {
       }
     }
 
-    sealed abstract class Statement extends Symbolic
+    sealed abstract class Statement extends TPTPPrinterPretty with SymbolQuery
     final case class Typing(atom: String, typ: Type) extends Statement
     final case class Logical(formula: Formula) extends Statement
     final case class Sequent(lhs: Seq[Term], rhs: Seq[Term]) extends Statement
 
-    sealed abstract class Formula extends Symbolic
+    sealed abstract class Formula extends TPTPPrinterPretty with SymbolQuery
     /** Important: `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
      * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
      * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
@@ -586,7 +577,7 @@ object TPTP {
      * for non-TFX TFF inputs. In match-case statements, non-exhaustiveness warnings may be suppressed
      * using the [[scala.unchecked]] annotation.
      */
-    sealed abstract class Term extends Symbolic
+    sealed abstract class Term extends TPTPPrinterPretty with SymbolQuery
     /**
      * A term expression that is either (1) a constant symbol `c`, or (2) a function expression `f(arg1,arg2,...,argN)`.
      * In case (1) it holds that `args.isEmpty`; in case (2) it holds that `args.nonEmpty`.
@@ -665,9 +656,7 @@ object TPTP {
 
     /** Logical connectives in TFF, includes [[UnaryConnective]]s and [[BinaryConnective]]s. */
     sealed abstract class Connective extends Pretty
-    sealed abstract class VararyNonclassicalOperator extends Pretty {
-      override def pretty: String = TPTPPrinter.render(this)
-    }
+    sealed abstract class VararyNonclassicalOperator extends TPTPPrinterPretty
     final case class NonclassicalLongOperator(name: String,
                                               index: Option[Term],
                                               parameters: Seq[(Term, Term)]) extends VararyNonclassicalOperator
@@ -707,7 +696,7 @@ object TPTP {
     /** epsilon binder (introduced in TPTP language v9.0.0.1) */
     final case object Epsilon extends Quantifier { override def pretty: String = "#" }
 
-    sealed abstract class Type extends Symbolic
+    sealed abstract class Type extends TPTPPrinterPretty with SymbolQuery
     final case class AtomicType(name: String, args: Seq[Type]) extends Type
     final case class MappingType(left: Seq[Type], right: Type) extends Type // right-assoc
     // TF1
@@ -727,11 +716,12 @@ object TPTP {
   object TCF {
     type Type = TFF.Type
 
-    sealed abstract class Statement extends Symbolic
+    sealed abstract class Statement extends TPTPPrinterPretty with SymbolQuery
     final case class Typing(atom: String, typ: Type) extends Statement
     final case class Logical(formula: Formula) extends Statement
 
-    final case class Formula(variables: Seq[TFF.TypedVariable], clause: CNF.Formula) extends Symbolic
+    final case class Formula(variables: Seq[TFF.TypedVariable], clause: CNF.Formula)
+      extends TPTPPrinterPretty with SymbolQuery
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -742,10 +732,10 @@ object TPTP {
 
   /** Contains the FOF AST data types. */
   object FOF {
-    sealed abstract class Statement extends Symbolic
+    sealed abstract class Statement extends TPTPPrinterPretty with SymbolQuery
     final case class Logical(formula: Formula) extends Statement
 
-    sealed abstract class Formula extends Symbolic
+    sealed abstract class Formula extends TPTPPrinterPretty with SymbolQuery
     /** `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
      * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
      * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
@@ -766,7 +756,7 @@ object TPTP {
     final case class Equality(left: Term, right: Term) extends Formula
     final case class Inequality(left: Term, right: Term) extends Formula
 
-    sealed abstract class Term extends Symbolic
+    sealed abstract class Term extends TPTPPrinterPretty with SymbolQuery
     /** `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
      * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
      * non-lower word atomic words are enclosed in single quotes, e.g. '...'.
@@ -817,12 +807,12 @@ object TPTP {
 
   /** Contains the CNF AST data types. */
   object CNF {
-    sealed abstract class Statement extends Symbolic
+    sealed abstract class Statement extends TPTPPrinterPretty with SymbolQuery
     final case class Logical(formula: Formula) extends Statement
 
     type Formula = Seq[Literal]
 
-    sealed abstract class Literal extends Symbolic
+    sealed abstract class Literal extends TPTPPrinterPretty with SymbolQuery
     final case class PositiveAtomic(formula: AtomicFormula) extends Literal
     final case class NegativeAtomic(formula: AtomicFormula) extends Literal
     final case class Equality(left: Term, right: Term) extends Literal
@@ -836,14 +826,14 @@ object TPTP {
      * transform via {{{TPTP.convertStringToAtomicWord}}} if necessary before.
      *
      * @see [[TPTP.convertStringToAtomicWord]] */
-    final case class AtomicFormula(f: String, args: Seq[Term]) extends Symbolic {
+    final case class AtomicFormula(f: String, args: Seq[Term]) extends TPTPPrinterPretty with SymbolQuery {
       @inline def isUninterpretedFunction: Boolean = !isDefinedFunction && !isSystemFunction
       @inline def isDefinedFunction: Boolean = f.startsWith("$") && !isSystemFunction
       @inline def isSystemFunction: Boolean = f.startsWith("$$")
       @inline def isConstant: Boolean = args.isEmpty
     }
 
-    sealed abstract class Term extends Symbolic
+    sealed abstract class Term extends TPTPPrinterPretty with SymbolQuery
     /** `f` may be a dollar word, a dollar dollar word (plain string starting with $ or $$),
      * a lower word (plain string with certain restrictions) or a single quoted TPTP atomic word. In the latter case,
      * non-lower word atomic words are enclosed in single quotes, e.g. '...'.

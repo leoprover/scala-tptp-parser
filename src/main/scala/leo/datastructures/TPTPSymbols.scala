@@ -6,8 +6,6 @@ import scala.collection.mutable
 /** Utility object for traversal for different symbol queries. A mask avoids allocating unwanted
  * category sets; All computes their union directly, in one traversal.
  *
- * @todo Relying on the [[Pretty]] trait is pretty ugly, but it does the job as every TPTP node
- *       extends it. Find a better solution, maybe.
  * @author Alexander Steen
  */
 private[datastructures] object TPTPSymbols {
@@ -18,8 +16,8 @@ private[datastructures] object TPTPSymbols {
   private final val Expression = Formula | Term
 
   private sealed trait Work
-  private final case class Visit(node: Pretty, context: Int) extends Work
-  private final case class Children(nodes: Iterator[Pretty], context: Int) extends Work
+  private final case class Visit(node: SymbolQuery, context: Int) extends Work
+  private final case class Children(nodes: Iterator[SymbolQuery], context: Int) extends Work
 
   /** Declaration classification is syntactic, not inferred from a signature. */
   private def declarationCategory(initial: TFF.Type): Int = {
@@ -33,12 +31,12 @@ private[datastructures] object TPTPSymbols {
     Term
   }
 
-  def collect(root: Pretty, mask: Int): Set[String] = {
+  def collect(root: SymbolQuery, mask: Int): Set[String] = {
     val found = mutable.HashSet.empty[String]
     val pending = mutable.ArrayDeque.empty[Work]
     def add(name: String, category: Int): Unit = if ((mask & category) != 0) found.add(name)
-    def visit(n: Pretty, context: Int = Expression): Unit = pending.append(Visit(n, context))
-    def children(ns: Iterable[Pretty], context: Int = Expression): Unit =
+    def visit(n: SymbolQuery, context: Int = Expression): Unit = pending.append(Visit(n, context))
+    def children(ns: Iterable[SymbolQuery], context: Int = Expression): Unit =
       pending.append(Children(ns.iterator, context))
     def declaration(n: String, t: TFF.Type): Unit = {
       add(n, declarationCategory(t))
